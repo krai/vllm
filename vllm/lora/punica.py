@@ -12,12 +12,14 @@ import torch
 from vllm.triton_utils import HAS_TRITON
 
 if HAS_TRITON:
-    from vllm.lora.ops.bgmv_expand import bgmv_expand
-    from vllm.lora.ops.bgmv_expand_slice import bgmv_expand_slice
-    from vllm.lora.ops.bgmv_shrink import bgmv_shrink
-    from vllm.lora.ops.sgmv_expand import sgmv_expand
-    from vllm.lora.ops.sgmv_expand_slice import sgmv_expand_slice
-    from vllm.lora.ops.sgmv_shrink import sgmv_shrink
+    from vllm.lora.ops.triton.bgmv_expand import bgmv_expand
+    from vllm.lora.ops.triton.bgmv_expand_slice import bgmv_expand_slice
+    from vllm.lora.ops.triton.bgmv_shrink import bgmv_shrink
+    from vllm.lora.ops.triton.sgmv_expand import sgmv_expand
+    from vllm.lora.ops.triton.sgmv_expand_slice import sgmv_expand_slice
+    from vllm.lora.ops.triton.sgmv_shrink import sgmv_shrink
+else:
+    from vllm.lora.ops.default.lora_ops import *
 
 if TYPE_CHECKING:
     # avoid circuit import
