@@ -69,7 +69,7 @@ def dist_init():
         rank=0,
         distributed_init_method=f"file://{temp_file}",
         local_rank=0,
-        backend="nccl",
+        backend="gloo", # TODO: Find a way to easily switch between this and nccl
     )
     initialize_model_parallel(1, 1)
     yield
@@ -82,10 +82,10 @@ def dist_init_torch_only():
         return
     temp_file = tempfile.mkstemp()[1]
     torch.distributed.init_process_group(
-        backend="nccl",
         world_size=1,
         rank=0,
         init_method=f"file://{temp_file}",
+        backend="gloo", # TODO: Find a way to easily switch between this and nccl
     )
 
 
