@@ -18,8 +18,7 @@ from vllm.utils import STR_DTYPE_TO_TORCH_DTYPE
 from vllm.worker.cpu_embedding_model_runner import CPUEmbeddingModelRunner
 from vllm.worker.cpu_enc_dec_model_runner import CPUEncoderDecoderModelRunner
 from vllm.worker.cpu_model_runner import CPUModelRunner, CPUModelRunnerBase
-from vllm.worker.worker_base import (LocalOrDistributedWorkerBase,
-                                     WorkerBase,
+from vllm.worker.worker_base import (LocalOrDistributedWorkerBase, WorkerBase,
                                      WorkerInput)
 
 logger = init_logger(__name__)
@@ -251,7 +250,7 @@ class CPUWorker(LocalOrDistributedWorkerBase):
 
         # Initialize the cache.
         self._init_cache_engine()
-        
+
     def add_lora(self, lora_request: LoRARequest) -> bool:
         return self.model_runner.add_lora(lora_request)
 

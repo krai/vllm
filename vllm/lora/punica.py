@@ -9,14 +9,8 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, Union
 
 import torch
 
-from vllm.lora.ops import (
-    bgmv_expand,
-    bgmv_expand_slice,
-    bgmv_shrink,
-    sgmv_expand,
-    sgmv_expand_slice,
-    sgmv_shrink
-)
+from vllm.lora.ops import (bgmv_expand, bgmv_expand_slice, bgmv_shrink,
+                           sgmv_expand, sgmv_expand_slice, sgmv_shrink)
 
 if TYPE_CHECKING:
     # avoid circuit import

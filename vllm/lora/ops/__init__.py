@@ -8,11 +8,6 @@ if HAS_TRITON:
     from vllm.lora.ops.triton.sgmv_expand_slice import sgmv_expand_slice
     from vllm.lora.ops.triton.sgmv_shrink import sgmv_shrink
 else:
-    from vllm.lora.ops.default.lora_ops import (
-        bgmv_expand,
-        bgmv_expand_slice,
-        bgmv_shrink,
-        sgmv_expand,
-        sgmv_expand_slice,
-        sgmv_shrink
-    )
+    from vllm.lora.ops.default.lora_ops import (bgmv_expand, bgmv_expand_slice,
+                                                bgmv_shrink, sgmv_expand,
+                                                sgmv_expand_slice, sgmv_shrink)

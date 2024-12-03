@@ -151,9 +151,12 @@ class ModelInputForCPUBuilder(ModelRunnerInputBuilderBase[ModelInputForCPU]):
         lora_requests = set()
         lora_mapping = None
         if self.enable_lora:
-            lora_requests = set(seq.lora_request for seq in self.seq_group_metadata_list if seq.lora_request is not None)
+            lora_requests = set(seq.lora_request
+                                for seq in self.seq_group_metadata_list
+                                if seq.lora_request is not None)
 
-            lora_mapping = self._prepare_lora_input(self.seq_group_metadata_list, is_prompt)
+            lora_mapping = self._prepare_lora_input(
+                self.seq_group_metadata_list, is_prompt)
 
         return self.model_input_cls(
             input_tokens=input_tokens,
@@ -440,22 +443,23 @@ class ModelInputForCPUBuilder(ModelRunnerInputBuilderBase[ModelInputForCPU]):
             attn_metadata,
         )
 
-    def _prepare_lora_input(self,
-        seq_group_metadata_list: List[SequenceGroupMetadata], is_prefill: bool) -> LoRAMapping:
+    def _prepare_lora_input(
+            self, seq_group_metadata_list: List[SequenceGroupMetadata],
+            is_prefill: bool) -> LoRAMapping:
         index_mapping = []
         prompt_mapping = []
         for seq in seq_group_metadata_list:
             lora_id = seq.lora_int_id
             query_len = seq.token_chunk_size
-            
+
             index_mapping += [lora_id] * query_len
-            prompt_mapping += [lora_id] * (query_len if seq.sampling_params and seq.sampling_params.prompt_logprobs is not None else 1)
-            
-        return LoRAMapping(
-            index_mapping=tuple(index_mapping),
-            prompt_mapping=tuple(prompt_mapping),
-            is_prefill=is_prefill
-        )
+            prompt_mapping += [lora_id] * (
+                query_len if seq.sampling_params
+                and seq.sampling_params.prompt_logprobs is not None else 1)
+
+        return LoRAMapping(index_mapping=tuple(index_mapping),
+                           prompt_mapping=tuple(prompt_mapping),
+                           is_prefill=is_prefill)
 
 
 class CPUModelRunnerBase(ModelRunnerBase[TModelInputForCPU]):
@@ -556,7 +560,7 @@ class CPUModelRunnerBase(ModelRunnerBase[TModelInputForCPU]):
             builder.add_seq_group(seq_group_metadata)
 
         return builder.build()  # type: ignore
-    
+
     def remove_all_loras(self):
         if not self.lora_manager:
             raise RuntimeError("LoRA is not enabled.")
@@ -639,7 +643,7 @@ class CPUModelRunner(CPUModelRunnerBase[ModelInputForCPUWithSamplingMetadata]):
         if num_steps > 1:
             raise ValueError(
                 "CPU worker does not support multi-step execution.")
-            
+
         if self.lora_config:
             assert model_input.lora_requests is not None
             assert model_input.lora_mapping is not None

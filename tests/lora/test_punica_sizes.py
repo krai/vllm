@@ -7,14 +7,8 @@ is set to [1, 2, 4, 8, 16, 32, 64].
 import pytest
 import torch
 
-from vllm.lora.ops import (
-    bgmv_expand,
-    bgmv_expand_slice,
-    bgmv_shrink,
-    sgmv_expand,
-    sgmv_expand_slice,
-    sgmv_shrink
-)
+from vllm.lora.ops import (bgmv_expand, bgmv_expand_slice, bgmv_shrink,
+                           sgmv_expand, sgmv_expand_slice, sgmv_shrink)
 from vllm.platforms import current_platform
 
 from .utils import (generate_data, generate_data_for_expand_nslices,
