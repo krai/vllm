@@ -69,8 +69,7 @@ def dist_init():
         rank=0,
         distributed_init_method=f"file://{temp_file}",
         local_rank=0,
-        backend=
-        "gloo",  # TODO: Find a way to easily switch between this and nccl
+        backend="nccl"
     )
     initialize_model_parallel(1, 1)
     yield
@@ -86,8 +85,7 @@ def dist_init_torch_only():
         world_size=1,
         rank=0,
         init_method=f"file://{temp_file}",
-        backend=
-        "gloo",  # TODO: Find a way to easily switch between this and nccl
+        backend="nccl"
     )
 
 
