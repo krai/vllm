@@ -6,12 +6,14 @@ maximum ranks.
 import pytest
 import torch
 
-from vllm.lora.ops.bgmv_expand import bgmv_expand
-from vllm.lora.ops.bgmv_expand_slice import bgmv_expand_slice
-from vllm.lora.ops.bgmv_shrink import bgmv_shrink
-from vllm.lora.ops.sgmv_expand import sgmv_expand
-from vllm.lora.ops.sgmv_expand_slice import sgmv_expand_slice
-from vllm.lora.ops.sgmv_shrink import sgmv_shrink
+from vllm.lora.ops import (
+    bgmv_expand,
+    bgmv_expand_slice,
+    bgmv_shrink,
+    sgmv_expand,
+    sgmv_expand_slice,
+    sgmv_shrink
+)
 from vllm.platforms import current_platform
 
 from .utils import (generate_data, generate_data_for_expand_nslices,
