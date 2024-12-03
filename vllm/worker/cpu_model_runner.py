@@ -27,12 +27,11 @@ from vllm.worker.model_runner_base import (
     _init_attn_metadata_from_tensor_dict,
     _init_sampling_metadata_from_tensor_dict)
 
-from vllm.model_executor.models import supports_lora
+from vllm.model_executor.models import supports_lora, supports_multimodal
 
 from vllm.lora.layers import LoRAMapping
 from vllm.lora.request import LoRARequest
 from vllm.lora.worker_manager import LRUCacheWorkerLoRAManager
-
 
 if TYPE_CHECKING:
     from vllm.attention.backends.abstract import AttentionBackend
@@ -508,14 +507,24 @@ class CPUModelRunnerBase(ModelRunnerBase[TModelInputForCPU]):
 
     def load_model(self) -> None:
         self.model = get_model(vllm_config=self.vllm_config)
-        
+
         if self.lora_config:
             assert supports_lora(
                 self.model
             ), f"{self.model.__class__.__name__} does not support LoRA yet."
             
-            max_pos_embeddings = self.model.config.max_position_embeddings # TODO: Add the multimodal case
-            
+            if supports_multimodal(self.model):
+                logger.warning("Regarding multimodal models, vLLM currently "
+                               "only supports adding LoRA to language model.")
+
+            # It's necessary to distinguish between the max_position_embeddings
+            # of VLMs and LLMs.
+            if hasattr(self.model.config, "max_position_embeddings"):
+                max_pos_embeddings = self.model.config.max_position_embeddings
+            else:
+                max_pos_embeddings = (
+                    self.model.config.text_config.max_position_embeddings)
+
             self.lora_manager = LRUCacheWorkerLoRAManager(
                 self.scheduler_config.max_num_seqs,
                 self.scheduler_config.max_num_batched_tokens,
