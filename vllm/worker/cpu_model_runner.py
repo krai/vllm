@@ -3,7 +3,7 @@ import weakref
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import (TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type,
-                    TypeVar, Union)
+                    TypeVar, Set, Union)
 
 import torch
 from torch import nn
@@ -27,6 +27,13 @@ from vllm.worker.model_runner_base import (
     _init_attn_metadata_from_tensor_dict,
     _init_sampling_metadata_from_tensor_dict)
 
+from vllm.model_executor.models import supports_lora
+
+from vllm.lora.layers import LoRAMapping
+from vllm.lora.request import LoRARequest
+from vllm.lora.worker_manager import LRUCacheWorkerLoRAManager
+
+
 if TYPE_CHECKING:
     from vllm.attention.backends.abstract import AttentionBackend
 
@@ -48,6 +55,8 @@ class ModelInputForCPU(ModelRunnerInputBase):
     virtual_engine: Optional[int] = None
     seq_lens: Optional[List[int]] = None
     query_lens: Optional[List[int]] = None
+    lora_mapping: Optional["LoRAMapping"] = None
+    lora_requests: Optional[Set[LoRARequest]] = None
 
     def as_broadcastable_tensor_dict(
             self) -> Dict[str, Union[int, torch.Tensor]]:
@@ -55,6 +64,8 @@ class ModelInputForCPU(ModelRunnerInputBase):
             "input_tokens": self.input_tokens,
             "input_positions": self.input_positions,
             "multi_modal_kwargs": self.multi_modal_kwargs,
+            "lora_requests": self.lora_requests,
+            "lora_mapping": self.lora_mapping,
         }
         _add_attn_metadata_broadcastable_dict(tensor_dict, self.attn_metadata)
 
@@ -116,6 +127,7 @@ class ModelInputForCPUBuilder(ModelRunnerInputBuilderBase[ModelInputForCPU]):
         self.block_size = self.runner.block_size
         self.device = self.runner.device
         self.multi_modal_input_mapper = self.runner.multi_modal_input_mapper
+        self.enable_lora = self.runner.lora_config is not None
 
     def add_seq_group(self, seq_group_metadata: SequenceGroupMetadata):
         self.seq_group_metadata_list.append(seq_group_metadata)
@@ -136,11 +148,21 @@ class ModelInputForCPUBuilder(ModelRunnerInputBuilderBase[ModelInputForCPU]):
                  self.seq_group_metadata_list)
             seq_lens = None
 
+        # LoRA data.
+        lora_requests = set()
+        lora_mapping = None
+        if self.enable_lora:
+            lora_requests = set(seq.lora_request for seq in self.seq_group_metadata_list if seq.lora_request is not None)
+
+            lora_mapping = self._prepare_lora_input(self.seq_group_metadata_list, is_prompt)
+
         return self.model_input_cls(
             input_tokens=input_tokens,
             input_positions=input_positions,
             attn_metadata=attn_metadata,
             multi_modal_kwargs=multi_modal_kwargs,
+            lora_mapping=lora_mapping,
+            lora_requests=lora_requests,
             # query_lens is not needed if chunked prefill is not
             # supported. Since CPU worker doesn't support chunked prefill
             # just use seq_lens instead.
@@ -419,6 +441,23 @@ class ModelInputForCPUBuilder(ModelRunnerInputBuilderBase[ModelInputForCPU]):
             attn_metadata,
         )
 
+    def _prepare_lora_input(self,
+        seq_group_metadata_list: List[SequenceGroupMetadata], is_prefill: bool) -> LoRAMapping:
+        index_mapping = []
+        prompt_mapping = []
+        for seq in seq_group_metadata_list:
+            lora_id = seq.lora_int_id
+            query_len = seq.token_chunk_size
+            
+            index_mapping += [lora_id] * query_len
+            prompt_mapping += [lora_id] * (query_len if seq.sampling_params and seq.sampling_params.prompt_logprobs is not None else 1)
+            
+        return LoRAMapping(
+            index_mapping=tuple(index_mapping),
+            prompt_mapping=tuple(prompt_mapping),
+            is_prefill=is_prefill
+        )
+
 
 class CPUModelRunnerBase(ModelRunnerBase[TModelInputForCPU]):
     """
@@ -464,9 +503,34 @@ class CPUModelRunnerBase(ModelRunnerBase[TModelInputForCPU]):
 
         # Lazy initialization.
         self.model: nn.Module  # Set after init_Model
+        # Set after load_model.
+        self.lora_manager: Optional[LRUCacheWorkerLoRAManager] = None
 
     def load_model(self) -> None:
         self.model = get_model(vllm_config=self.vllm_config)
+        
+        if self.lora_config:
+            assert supports_lora(
+                self.model
+            ), f"{self.model.__class__.__name__} does not support LoRA yet."
+            
+            max_pos_embeddings = self.model.config.max_position_embeddings # TODO: Add the multimodal case
+            
+            self.lora_manager = LRUCacheWorkerLoRAManager(
+                self.scheduler_config.max_num_seqs,
+                self.scheduler_config.max_num_batched_tokens,
+                self.vocab_size,
+                self.lora_config,
+                self.device,
+                self.model.embedding_modules,
+                self.model.embedding_padding_modules,
+                max_position_embeddings=max_pos_embeddings,
+            )
+            self.model = self.lora_manager.create_lora_manager(self.model)
+
+    @property
+    def vocab_size(self) -> int:
+        return self.model_config.get_vocab_size()
 
     def _prepare_model_input_tensors(
         self,
@@ -483,6 +547,37 @@ class CPUModelRunnerBase(ModelRunnerBase[TModelInputForCPU]):
             builder.add_seq_group(seq_group_metadata)
 
         return builder.build()  # type: ignore
+    
+    def remove_all_loras(self):
+        if not self.lora_manager:
+            raise RuntimeError("LoRA is not enabled.")
+        self.lora_manager.remove_all_adapters()
+
+    def set_active_loras(self, lora_requests: Set[LoRARequest],
+                         lora_mapping: LoRAMapping) -> None:
+        if not self.lora_manager:
+            raise RuntimeError("LoRA is not enabled.")
+        self.lora_manager.set_active_adapters(lora_requests, lora_mapping)
+
+    def add_lora(self, lora_request: LoRARequest) -> bool:
+        if not self.lora_manager:
+            raise RuntimeError("LoRA is not enabled.")
+        return self.lora_manager.add_adapter(lora_request)
+
+    def remove_lora(self, lora_id: int) -> bool:
+        if not self.lora_manager:
+            raise RuntimeError("LoRA is not enabled.")
+        return self.lora_manager.remove_adapter(lora_id)
+
+    def pin_lora(self, lora_id: int) -> bool:
+        if not self.lora_manager:
+            raise RuntimeError("LoRA is not enabled.")
+        return self.lora_manager.pin_adapter(lora_id)
+
+    def list_loras(self) -> Set[int]:
+        if not self.lora_manager:
+            raise RuntimeError("LoRA is not enabled.")
+        return self.lora_manager.list_adapters()
 
 
 class CPUModelRunner(CPUModelRunnerBase[ModelInputForCPUWithSamplingMetadata]):
@@ -535,6 +630,12 @@ class CPUModelRunner(CPUModelRunnerBase[ModelInputForCPUWithSamplingMetadata]):
         if num_steps > 1:
             raise ValueError(
                 "CPU worker does not support multi-step execution.")
+            
+        if self.lora_config:
+            assert model_input.lora_requests is not None
+            assert model_input.lora_mapping is not None
+            self.set_active_loras(model_input.lora_requests,
+                                  model_input.lora_mapping)
 
         model_executable = self.model
         execute_model_kwargs = {
