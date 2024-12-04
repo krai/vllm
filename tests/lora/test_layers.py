@@ -9,6 +9,7 @@ import torch
 import torch.nn.functional as F
 
 from vllm.config import LoRAConfig
+from vllm.platforms import current_platform
 from vllm.lora.fully_sharded_layers import (
     ColumnParallelLinearWithShardedLoRA,
     MergedColumnParallelLinearWithShardedLoRA,
@@ -48,9 +49,19 @@ TOLERANCES = {
     torch.float32: (5e-3, 5e-3),
     torch.bfloat16: (3e-2, 2e-2),
 }
+
+pytestmark = pytest.mark.skipif(not (
+    current_platform.is_cuda_alike() or 
+    current_platform.is_cpu()
+))
+
 CUDA_DEVICES = [
     f"cuda:{i}" for i in range(1 if torch.cuda.device_count() == 1 else 2)
 ]
+
+CPU_DEVICES = ["cpu"]
+
+DEVICES = CUDA_DEVICES if current_platform.is_cuda_alike() else CPU_DEVICES
 
 # We will launch different triton kernels between the prefill and decode
 # stages, so we need to verify this. prefill stage(True) or decode stage(False)
@@ -194,7 +205,7 @@ def create_random_inputs(
 
 @torch.inference_mode()
 @pytest.mark.parametrize("num_loras", [1, 2, 4, 8])
-@pytest.mark.parametrize("device", CUDA_DEVICES)
+@pytest.mark.parametrize("device", DEVICES)
 @pytest.mark.parametrize("vocab_size", [512, 32000, 64000, 128000])
 @pytest.mark.parametrize("stage", STAGES)
 def test_embeddings(dist_init, num_loras, device, vocab_size, stage) -> None:
@@ -296,7 +307,7 @@ def test_embeddings(dist_init, num_loras, device, vocab_size, stage) -> None:
 # @pytest.mark.skip(
 #     reason="Fails when loras are in any slot other than the first.")
 @pytest.mark.parametrize("num_loras", [1, 2, 4, 8])
-@pytest.mark.parametrize("device", CUDA_DEVICES)
+@pytest.mark.parametrize("device", DEVICES)
 @pytest.mark.parametrize("vocab_size", [512, 32000, 64000, 128000])
 @pytest.mark.parametrize("stage", STAGES)
 def test_embeddings_with_new_embeddings(dist_init, num_loras, device,
@@ -432,7 +443,7 @@ def test_embeddings_with_new_embeddings(dist_init, num_loras, device,
 
 @torch.inference_mode()
 @pytest.mark.parametrize("num_loras", [1, 2, 4, 8])
-@pytest.mark.parametrize("device", CUDA_DEVICES)
+@pytest.mark.parametrize("device", DEVICES)
 @pytest.mark.parametrize("vocab_size", [512, 32000, 64000, 256512])
 @pytest.mark.parametrize("stage", STAGES)
 def test_lm_head_logits_processor(dist_init, num_loras, device, vocab_size,
@@ -563,7 +574,7 @@ def test_lm_head_logits_processor(dist_init, num_loras, device, vocab_size,
 
 @torch.inference_mode()
 @pytest.mark.parametrize("num_loras", [1, 2, 4, 8])
-@pytest.mark.parametrize("device", CUDA_DEVICES)
+@pytest.mark.parametrize("device", DEVICES)
 @pytest.mark.parametrize("stage", STAGES)
 def test_linear_replicated(dist_init, num_loras, device, stage) -> None:
 
@@ -667,7 +678,7 @@ def test_linear_replicated(dist_init, num_loras, device, stage) -> None:
 @pytest.mark.parametrize("num_loras", [1, 2, 4, 8])
 @pytest.mark.parametrize("orientation", ["row", "column"])
 @pytest.mark.parametrize("fully_shard", [True, False])
-@pytest.mark.parametrize("device", CUDA_DEVICES)
+@pytest.mark.parametrize("device", DEVICES)
 @pytest.mark.parametrize("stage", STAGES)
 def test_linear_parallel(dist_init, num_loras, orientation, fully_shard,
                          device, stage) -> None:
@@ -782,7 +793,7 @@ def test_linear_parallel(dist_init, num_loras, orientation, fully_shard,
 @pytest.mark.parametrize("num_loras", [1, 2, 4, 8])
 @pytest.mark.parametrize("repeats", [1, 2, 3])
 @pytest.mark.parametrize("fully_shard", [True, False])
-@pytest.mark.parametrize("device", CUDA_DEVICES)
+@pytest.mark.parametrize("device", DEVICES)
 @pytest.mark.parametrize("stage", STAGES)
 def test_column_parallel_packed(dist_init, num_loras, repeats, fully_shard,
                                 device, stage) -> None:
