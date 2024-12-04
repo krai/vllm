@@ -53,7 +53,7 @@ TOLERANCES = {
 pytestmark = pytest.mark.skipif(not (
     current_platform.is_cuda_alike() or 
     current_platform.is_cpu()
-))
+), reason="Backend not supported")
 
 CUDA_DEVICES = [
     f"cuda:{i}" for i in range(1 if torch.cuda.device_count() == 1 else 2)
@@ -212,7 +212,8 @@ def test_embeddings(dist_init, num_loras, device, vocab_size, stage) -> None:
     # For multi-GPU testing of Triton kernel, we must explicitly set the CUDA
     # device, see: https://github.com/triton-lang/triton/issues/2925
     # Same below.
-    torch.cuda.set_device(device)
+    if current_platform.is_cuda_alike():
+        torch.cuda.set_device(device)
 
     torch.set_default_device(device)
     max_loras = 8
@@ -313,7 +314,9 @@ def test_embeddings(dist_init, num_loras, device, vocab_size, stage) -> None:
 def test_embeddings_with_new_embeddings(dist_init, num_loras, device,
                                         vocab_size, stage) -> None:
 
-    torch.cuda.set_device(device)
+    if current_platform.is_cuda_alike():
+        torch.cuda.set_device(device)
+
     torch.set_default_device(device)
     max_loras = 8
     punica_wrapper = PunicaWrapper(8192, 256, device)
@@ -449,7 +452,9 @@ def test_embeddings_with_new_embeddings(dist_init, num_loras, device,
 def test_lm_head_logits_processor(dist_init, num_loras, device, vocab_size,
                                   stage) -> None:
 
-    torch.cuda.set_device(device)
+    if current_platform.is_cuda_alike():
+        torch.cuda.set_device(device)
+
     torch.set_default_device(device)
     max_loras = 8
     punica_wrapper = PunicaWrapper(8192, 256, device)
@@ -578,7 +583,9 @@ def test_lm_head_logits_processor(dist_init, num_loras, device, vocab_size,
 @pytest.mark.parametrize("stage", STAGES)
 def test_linear_replicated(dist_init, num_loras, device, stage) -> None:
 
-    torch.cuda.set_device(device)
+    if current_platform.is_cuda_alike():
+        torch.cuda.set_device(device)
+
     torch.set_default_device(device)
     punica_wrapper = PunicaWrapper(8192, 256, device)
     max_loras = 8
@@ -683,7 +690,9 @@ def test_linear_replicated(dist_init, num_loras, device, stage) -> None:
 def test_linear_parallel(dist_init, num_loras, orientation, fully_shard,
                          device, stage) -> None:
 
-    torch.cuda.set_device(device)
+    if current_platform.is_cuda_alike():
+        torch.cuda.set_device(device)
+
     torch.set_default_device(device)
     punica_wrapper = PunicaWrapper(8192, 256, device)
     max_loras = 8
@@ -798,7 +807,9 @@ def test_linear_parallel(dist_init, num_loras, orientation, fully_shard,
 def test_column_parallel_packed(dist_init, num_loras, repeats, fully_shard,
                                 device, stage) -> None:
 
-    torch.cuda.set_device(device)
+    if current_platform.is_cuda_alike():
+        torch.cuda.set_device(device)
+
     torch.set_default_device(device)
     punica_wrapper = PunicaWrapper(8192, 256, device)
     max_loras = 8
@@ -944,6 +955,7 @@ def test_column_parallel_packed(dist_init, num_loras, repeats, fully_shard,
 @pytest.mark.parametrize("rotary_dim", [None, 32])
 @pytest.mark.parametrize("head_size", [32, 108])
 @pytest.mark.parametrize("seq_len", [11, 1024])
+@pytest.mark.skipif(not current_platform.is_cuda_alike(), reason="Only CUDA backends are supported")
 def test_rotary_embedding_long_context(dist_init, num_loras, device,
                                        scaling_factors, max_position,
                                        is_neox_style, rotary_dim, head_size,

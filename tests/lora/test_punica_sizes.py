@@ -106,7 +106,10 @@ DTYPES = [torch.float16, torch.bfloat16]
 MAX_RANKS = [32]
 SCALES = [0.5]
 SEED = [0]
-CUDA_DEVICES = [f"cuda:{0}"]
+
+CUDA_DEVICES = ["cuda:0"]
+CPU_DEVICES = ["cpu"]
+DEVICES = CUDA_DEVICES if current_platform.is_cuda_alike() else CPU_DEVICES
 
 
 def assert_close(a, b):
@@ -126,7 +129,7 @@ def assert_close(a, b):
 @pytest.mark.parametrize("dtype", DTYPES)
 @pytest.mark.parametrize("op_type", ["shrink", "expand"])
 @pytest.mark.parametrize("seed", SEED)
-@pytest.mark.parametrize("device", CUDA_DEVICES)
+@pytest.mark.parametrize("device", DEVICES)
 def test_punica_sgmv(
     batches: int,
     num_loras: int,
@@ -216,7 +219,7 @@ def test_punica_sgmv(
 @pytest.mark.parametrize("dtype", DTYPES)
 @pytest.mark.parametrize("op_type", ["shrink", "expand"])
 @pytest.mark.parametrize("seed", SEED)
-@pytest.mark.parametrize("device", CUDA_DEVICES)
+@pytest.mark.parametrize("device", DEVICES)
 def test_punica_bgmv(
     batches: int,
     num_loras: int,
@@ -290,7 +293,7 @@ def test_punica_bgmv(
 @pytest.mark.parametrize("dtype", DTYPES)
 @pytest.mark.parametrize("op_type", ["sgmv", "bgmv"])
 @pytest.mark.parametrize("seed", SEED)
-@pytest.mark.parametrize("device", CUDA_DEVICES)
+@pytest.mark.parametrize("device", DEVICES)
 def test_punica_expand_nslices(
     batches: int,
     num_loras: int,
