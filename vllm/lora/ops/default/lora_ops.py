@@ -23,7 +23,7 @@ def bgmv_expand(inputs: torch.Tensor,
                 output_tensor: torch.Tensor,
                 lora_indices_tensor: torch.Tensor,
                 add_inputs: bool = True):
-    selected_loras = lora_b_weights[lora_indices_tensor].squeeze(dim=1).to(dtype=output_tensor.dtype)
+    selected_loras = lora_b_weights[lora_indices_tensor].to(dtype=output_tensor.dtype)
     inputs = inputs.to(dtype=output_tensor.dtype)
     outputs = torch.einsum("bi, boi -> bo", inputs, selected_loras)
 
@@ -61,7 +61,7 @@ def bgmv_shrink(inputs: torch.Tensor,
                 output_tensor: torch.Tensor,
                 lora_indices_tensor: torch.Tensor,
                 scaling: float = 1.0):
-    selected_loras = lora_b_weights[lora_indices_tensor].squeeze(dim=1).to(dtype=output_tensor.dtype)
+    selected_loras = lora_b_weights[lora_indices_tensor].to(dtype=output_tensor.dtype)
     inputs = inputs.to(dtype=output_tensor.dtype)
     outputs = torch.einsum("bi, boi -> bo", inputs, selected_loras)
 
@@ -94,7 +94,7 @@ def bgmv_expand_slice(inputs: torch.Tensor,
                       slice_offset: int,
                       slice_size: int,
                       add_inputs: bool = True):
-    selected_loras = lora_b_weights[lora_indices_tensor].squeeze(dim=1).to(dtype=output_tensor.dtype)
+    selected_loras = lora_b_weights[lora_indices_tensor].to(dtype=output_tensor.dtype)
     inputs = inputs.to(dtype=output_tensor.dtype)
     outputs = torch.einsum("bi, boi -> bo", inputs, selected_loras)
 
