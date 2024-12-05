@@ -9,7 +9,6 @@ import torch
 import torch.nn.functional as F
 
 from vllm.config import LoRAConfig
-from vllm.platforms import current_platform
 from vllm.lora.fully_sharded_layers import (
     ColumnParallelLinearWithShardedLoRA,
     MergedColumnParallelLinearWithShardedLoRA,

@@ -5,6 +5,7 @@ import torch
 
 import vllm
 from vllm.lora.request import LoRARequest
+from vllm.platforms import current_platform
 
 MODEL_PATH = "mistralai/Mixtral-8x7B-Instruct-v0.1"
 
@@ -32,7 +33,8 @@ def do_sample(llm: vllm.LLM, lora_path: str, lora_id: int,
 def test_mixtral_lora(mixtral_lora_files, tp_size):
     """Original test, the LoRA model has the common target modules, not all"""
     if torch.cuda.device_count() < tp_size:
-        pytest.skip(f"Not enough GPUs for tensor parallelism {tp_size}")
+        if tp_size > 1 and current_platform.is_cuda_alike():
+            pytest.skip(f"Not enough GPUs for tensor parallelism {tp_size}")
 
     prompts = [
         "[system] Given a target sentence construct the underlying meaning representation\nof the input sentence as a single function with attributes and attribute\nvalues. This function should describe the target string accurately and the\nfunction must be one of the following ['inform', 'request', 'give_opinion',\n'confirm', 'verify_attribute', 'suggest', 'request_explanation',\n'recommend', 'request_attribute'].\n\nThe attributes must be one of the following:\n['name', 'exp_release_date', 'release_year', 'developer', 'esrb', 'rating',\n'genres', 'player_perspective', 'has_multiplayer', 'platforms',\n'available_on_steam', 'has_linux_release', 'has_mac_release', 'specifier'] [/system] [user] Here is the target sentence:\nSpellForce 3 is a pretty bad game. The developer Grimlore Games is clearly a bunch of no-talent hacks, and 2017 was a terrible year for games anyway. [/user] [assistant]",  # noqa: E501
