@@ -6,8 +6,30 @@ maximum ranks.
 import pytest
 import torch
 
-from vllm.lora.ops import (bgmv_expand, bgmv_expand_slice, bgmv_shrink,
-                           sgmv_expand, sgmv_expand_slice, sgmv_shrink)
+from vllm.triton_utils import HAS_TRITON
+
+# Enable custom op register if we're using custom ops
+if HAS_TRITON:
+    import vllm.lora.ops.triton.bgmv_expand
+    import vllm.lora.ops.triton.bgmv_expand_slice
+    import vllm.lora.ops.triton.bgmv_shrink
+    import vllm.lora.ops.triton.sgmv_expand
+    import vllm.lora.ops.triton.sgmv_expand_slice
+    import vllm.lora.ops.triton.sgmv_shrink  # noqa: F401
+
+    # Unlike test_punica_sizes.py, we directly utilize custom op for
+    # testing, which verifies the correct registration of these ops.
+    bgmv_expand = torch.ops.vllm.bgmv_expand
+    bgmv_expand_slice = torch.ops.vllm.bgmv_expand_slice
+    bgmv_shrink = torch.ops.vllm.bgmv_shrink
+    sgmv_expand = torch.ops.vllm.sgmv_expand
+    sgmv_expand_slice = torch.ops.vllm.sgmv_expand_slice
+    sgmv_shrink = torch.ops.vllm.sgmv_shrink
+else:
+    from vllm.lora.ops.default.lora_ops import (bgmv_expand, bgmv_expand_slice,
+                                                bgmv_shrink, sgmv_expand,
+                                                sgmv_expand_slice, sgmv_shrink)
+
 from vllm.platforms import current_platform
 
 from .utils import (generate_data, generate_data_for_expand_nslices,
@@ -34,7 +56,6 @@ def assert_close(a, b):
         torch.float32: (1e-2, 1e-2),
     }[a.dtype]
     torch.testing.assert_close(a, b, rtol=rtol, atol=atol)
-
 
 @pytest.mark.parametrize("batches", BATCHES)
 @pytest.mark.parametrize("num_loras", NUM_LORA)
