@@ -2,8 +2,8 @@ import dataclasses
 import weakref
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import (TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type,
-                    TypeVar, Set, Union)
+from typing import (TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type,
+                    TypeVar, Union)
 
 import torch
 from torch import nn
@@ -11,10 +11,14 @@ from torch import nn
 from vllm.attention import AttentionMetadata, get_attn_backend
 from vllm.config import VllmConfig
 from vllm.logger import init_logger
+from vllm.lora.layers import LoRAMapping
+from vllm.lora.request import LoRARequest
+from vllm.lora.worker_manager import LRUCacheWorkerLoRAManager
 from vllm.model_executor import SamplingMetadata
 from vllm.model_executor.layers.rotary_embedding import MRotaryEmbedding
 from vllm.model_executor.layers.sampler import SamplerOutput
 from vllm.model_executor.model_loader import get_model
+from vllm.model_executor.models import supports_lora, supports_multimodal
 from vllm.multimodal import (MULTIMODAL_REGISTRY, BatchedTensorInputs,
                              MultiModalKwargs, MultiModalPlaceholderMap)
 from vllm.sequence import (IntermediateTensors, SequenceData,
@@ -26,12 +30,6 @@ from vllm.worker.model_runner_base import (
     _add_sampling_metadata_broadcastable_dict,
     _init_attn_metadata_from_tensor_dict,
     _init_sampling_metadata_from_tensor_dict)
-
-from vllm.model_executor.models import supports_lora, supports_multimodal
-
-from vllm.lora.layers import LoRAMapping
-from vllm.lora.request import LoRARequest
-from vllm.lora.worker_manager import LRUCacheWorkerLoRAManager
 
 if TYPE_CHECKING:
     from vllm.attention.backends.abstract import AttentionBackend
@@ -516,7 +514,7 @@ class CPUModelRunnerBase(ModelRunnerBase[TModelInputForCPU]):
             assert supports_lora(
                 self.model
             ), f"{self.model.__class__.__name__} does not support LoRA yet."
-            
+
             if supports_multimodal(self.model):
                 logger.warning("Regarding multimodal models, vLLM currently "
                                "only supports adding LoRA to language model.")

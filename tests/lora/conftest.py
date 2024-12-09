@@ -10,7 +10,6 @@ from huggingface_hub import snapshot_download
 
 import vllm
 from vllm.config import LoRAConfig
-from vllm.platforms import current_platform
 from vllm.distributed import (cleanup_dist_env_and_memory,
                               init_distributed_environment,
                               initialize_model_parallel)
@@ -21,6 +20,7 @@ from vllm.model_executor.layers.logits_processor import LogitsProcessor
 from vllm.model_executor.layers.sampler import Sampler
 from vllm.model_executor.layers.vocab_parallel_embedding import ParallelLMHead
 from vllm.model_executor.model_loader import get_model
+from vllm.platforms import current_platform
 
 
 class ContextIDInfo(TypedDict):
@@ -65,18 +65,16 @@ def cleanup_fixture(should_do_global_cleanup_after_test: bool):
 @pytest.fixture
 def dist_init():
     temp_file = tempfile.mkstemp()[1]
-    
+
     backend = "nccl"
     if current_platform.is_cpu():
         backend = "gloo"
-        
-    init_distributed_environment(
-        world_size=1,
-        rank=0,
-        distributed_init_method=f"file://{temp_file}",
-        local_rank=0,
-        backend=backend
-    )
+
+    init_distributed_environment(world_size=1,
+                                 rank=0,
+                                 distributed_init_method=f"file://{temp_file}",
+                                 local_rank=0,
+                                 backend=backend)
     initialize_model_parallel(1, 1)
     yield
     cleanup_dist_env_and_memory(shutdown_ray=True)
@@ -85,18 +83,16 @@ def dist_init():
 @pytest.fixture
 def dist_init_torch_only():
     if torch.distributed.is_initialized():
-        return    
+        return
     backend = "nccl"
     if current_platform.is_cpu():
         backend = "gloo"
-    
+
     temp_file = tempfile.mkstemp()[1]
-    torch.distributed.init_process_group(
-        world_size=1,
-        rank=0,
-        init_method=f"file://{temp_file}",
-        backend=backend
-    )
+    torch.distributed.init_process_group(world_size=1,
+                                         rank=0,
+                                         init_method=f"file://{temp_file}",
+                                         backend=backend)
 
 
 @pytest.fixture

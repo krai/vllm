@@ -49,10 +49,9 @@ TOLERANCES = {
     torch.bfloat16: (3e-2, 2e-2),
 }
 
-pytestmark = pytest.mark.skipif(not (
-    current_platform.is_cuda_alike() or 
-    current_platform.is_cpu()
-), reason="Backend not supported")
+pytestmark = pytest.mark.skipif(
+    not (current_platform.is_cuda_alike() or current_platform.is_cpu()),
+    reason="Backend not supported")
 
 CUDA_DEVICES = [
     f"cuda:{i}" for i in range(1 if torch.cuda.device_count() == 1 else 2)
@@ -954,7 +953,8 @@ def test_column_parallel_packed(dist_init, num_loras, repeats, fully_shard,
 @pytest.mark.parametrize("rotary_dim", [None, 32])
 @pytest.mark.parametrize("head_size", [32, 108])
 @pytest.mark.parametrize("seq_len", [11, 1024])
-@pytest.mark.skipif(not current_platform.is_cuda_alike(), reason="Only CUDA backends are supported")
+@pytest.mark.skipif(not current_platform.is_cuda_alike(),
+                    reason="Only CUDA backends are supported")
 def test_rotary_embedding_long_context(dist_init, num_loras, device,
                                        scaling_factors, max_position,
                                        is_neox_style, rotary_dim, head_size,

@@ -40,9 +40,9 @@ def do_sample(llm: vllm.LLM, lora_path: str, lora_id: int) -> List[str]:
 
 @pytest.mark.parametrize("tp_size", [1, 2, 4])
 def test_llama_lora(sql_lora_files, tp_size, num_gpus_available):
-    if num_gpus_available < tp_size:
-        if tp_size > 1 and current_platform.is_cuda_alike():
-            pytest.skip(f"Not enough GPUs for tensor parallelism {tp_size}")
+    if num_gpus_available < tp_size and \
+        tp_size > 1 and current_platform.is_cuda_alike():
+        pytest.skip(f"Not enough GPUs for tensor parallelism {tp_size}")
 
     llm = vllm.LLM(MODEL_PATH,
                    enable_lora=True,
