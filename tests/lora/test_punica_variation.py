@@ -26,9 +26,9 @@ if HAS_TRITON:
     sgmv_expand_slice = torch.ops.vllm.sgmv_expand_slice
     sgmv_shrink = torch.ops.vllm.sgmv_shrink
 else:
-    from vllm.lora.ops.default.lora_ops import (bgmv_expand, bgmv_expand_slice,
-                                                bgmv_shrink, sgmv_expand,
-                                                sgmv_expand_slice, sgmv_shrink)
+    from vllm.lora.ops.default.lora_ops import (  # type: ignore
+        bgmv_expand, bgmv_expand_slice, bgmv_shrink, sgmv_expand,
+        sgmv_expand_slice, sgmv_shrink)
 
 from vllm.platforms import current_platform
 
@@ -56,6 +56,7 @@ def assert_close(a, b):
         torch.float32: (1e-2, 1e-2),
     }[a.dtype]
     torch.testing.assert_close(a, b, rtol=rtol, atol=atol)
+
 
 @pytest.mark.parametrize("batches", BATCHES)
 @pytest.mark.parametrize("num_loras", NUM_LORA)

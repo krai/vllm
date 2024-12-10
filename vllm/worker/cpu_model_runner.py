@@ -2,7 +2,7 @@ import dataclasses
 import weakref
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import (TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type,
+from typing import (TYPE_CHECKING, Any, Dict, List, Optional, Set, Type,
                     TypeVar, Union)
 
 import torch
@@ -24,7 +24,6 @@ from vllm.multimodal import (MULTIMODAL_REGISTRY, BatchedTensorInputs,
                              MultiModalKwargs, MultiModalPlaceholderMap)
 from vllm.sequence import (IntermediateTensors, SequenceData,
                            SequenceGroupMetadata)
-from vllm.utils import make_tensor_with_pad
 from vllm.worker.model_runner_base import (
     ModelRunnerBase, ModelRunnerInputBase, ModelRunnerInputBuilderBase,
     _add_attn_metadata_broadcastable_dict,
@@ -198,7 +197,7 @@ class ModelInputForCPUBuilder(ModelRunnerInputBuilderBase[ModelInputForCPU]):
             input_data.seq_lens, input_data.query_lens, -1, -1)
 
         is_prompt = (self.seq_group_metadata_list[0].is_prompt
-                        if self.seq_group_metadata_list else None)
+                     if self.seq_group_metadata_list else None)
         # LoRA data.
         lora_requests = set()
         lora_mapping = None
@@ -210,17 +209,15 @@ class ModelInputForCPUBuilder(ModelRunnerInputBuilderBase[ModelInputForCPU]):
             lora_mapping = self._prepare_lora_input(
                 self.seq_group_metadata_list, is_prompt)
 
-        return self.model_input_cls(
-            input_tokens=input_tokens,
-            input_positions=input_positions,
-            token_type_ids=token_type_ids,
-            seq_lens=input_data.seq_lens,
-            query_lens=input_data.query_lens,
-            attn_metadata=attn_metadata,
-            multi_modal_kwargs=multi_modal_kwargs,
-            lora_mapping=lora_mapping,
-            lora_requests=lora_requests
-        )
+        return self.model_input_cls(input_tokens=input_tokens,
+                                    input_positions=input_positions,
+                                    token_type_ids=token_type_ids,
+                                    seq_lens=input_data.seq_lens,
+                                    query_lens=input_data.query_lens,
+                                    attn_metadata=attn_metadata,
+                                    multi_modal_kwargs=multi_modal_kwargs,
+                                    lora_mapping=lora_mapping,
+                                    lora_requests=lora_requests)
 
     def _build_input_data(self):
         for seq_group_metadata in self.seq_group_metadata_list:
@@ -410,7 +407,6 @@ class ModelInputForCPUBuilder(ModelRunnerInputBuilderBase[ModelInputForCPU]):
         for modality, placeholder_map in placeholder_maps.items():
             self.input_data.multi_modal_placeholder_maps[modality].extend(
                 placeholder_map)
-
 
     def _prepare_lora_input(
             self, seq_group_metadata_list: List[SequenceGroupMetadata],
