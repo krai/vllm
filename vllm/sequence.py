@@ -110,6 +110,8 @@ class RequestMetrics:
         model_execute_time: The time spent in the model execute function. This
                             will include model forward, block/sync across
                             workers, cpu-gpu sync time and sampling time.
+        model_load_time: The time spent in reading the model from disk / downloading
+                         the model to disk and loading it into GPU memory. 
     """
     arrival_time: float
     last_token_time: float
@@ -120,6 +122,7 @@ class RequestMetrics:
     scheduler_time: Optional[float] = None
     model_forward_time: Optional[float] = None
     model_execute_time: Optional[float] = None
+    model_load_time: Optional[float] = None
 
 
 class SequenceDataDelta(

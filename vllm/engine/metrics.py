@@ -197,6 +197,11 @@ class Metrics:
             "Histogram of time spent in the model execute function in ms.",
             labelnames=labelnames,
             buckets=build_1_2_3_5_8_buckets(3000))
+        self.gauge_model_load_time_request = self._gauge_cls(
+            name="vllm:model_load_time_seconds",
+            documentation="time spent in the model loading in s.",
+            labelnames=labelnames,
+            multiprocess_mode="sum")
         #   Metadata
         self.histogram_num_prompt_tokens_request = self._histogram_cls(
             name="vllm:request_prompt_tokens",
@@ -229,6 +234,11 @@ class Metrics:
             labelnames=labelnames,
             buckets=build_1_2_5_buckets(max_model_len),
         )
+        self.gauge_max_token_capacity_request = self._gauge_cls(
+            name="vllm:max_token_capacity_tokens",
+            documentation="Maximum token capacity in tokens.",
+            labelnames=labelnames,
+            multiprocess_mode="sum")
         self.counter_request_success = self._counter_cls(
             name="vllm:request_success_total",
             documentation="Count of successfully processed requests.",
@@ -616,6 +626,8 @@ class PrometheusStatLogger(StatLoggerBase):
                             stats.model_forward_time_requests)
         self._log_histogram(self.metrics.histogram_model_execute_time_request,
                             stats.model_execute_time_requests)
+        self._log_gauge(self.metrics.gauge_model_load_time_requests,
+                        stats.model_load_time_requests)
         # Metadata
         finished_reason_counter = CollectionsCounter(
             stats.finished_reason_requests)
@@ -633,6 +645,8 @@ class PrometheusStatLogger(StatLoggerBase):
             stats.max_num_generation_tokens_requests)
         self._log_histogram(self.metrics.histogram_max_tokens_request,
                             stats.max_tokens_requests)
+        self._log_gauge(self.metrics.gauge_max_token_capacity_requests,
+                        stats.max_token_capacity_requests)
 
     def _log_prometheus_interval(self, prompt_throughput: float,
                                  generation_throughput: float) -> None:

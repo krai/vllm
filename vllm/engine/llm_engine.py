@@ -1622,14 +1622,21 @@ class LLMEngine:
         time_prefill_requests: List[float] = []
         time_decode_requests: List[float] = []
         time_in_queue_requests: List[float] = []
+        time_per_prefill_token_requests: List[float] = []
         model_forward_time_requests: List[float] = []
         model_execute_time_requests: List[float] = []
+        model_load_time_requests: List[float] = []
         #   Metadata
         num_prompt_tokens_requests: List[int] = []
         num_generation_tokens_requests: List[int] = []
         n_requests: List[int] = []
         max_num_generation_tokens_requests: List[int] = []
         max_tokens_requests: List[int] = []
+        max_token_capacity_requests: List[int] = []
+        total_tokens_in_current_batch_requests: List[int] = []
+        total_tokens_in_queue_requests: List[int]
+        request_with_evicted_tokens_requests: List[int] = []
+        total_evicted_tokens_requests: List[int] = []
         finished_reason_requests: List[str] = []
 
         # Lora requests
@@ -1740,6 +1747,9 @@ class LLMEngine:
                     if seq_group.metrics.model_execute_time is not None:
                         model_execute_time_requests.append(
                             seq_group.metrics.model_execute_time * 1000)
+                    if seq_group.metrics.model_execute_time is not None:
+                        model_load_time_requests.append(
+                            seq_group.metrics.model_load_time)
                     # Metadata
                     num_prompt_tokens_requests.append(
                         len(seq_group.prompt_token_ids))
@@ -1754,6 +1764,8 @@ class LLMEngine:
                         n_requests.append(seq_group.sampling_params.n)
                         max_tokens_requests.append(
                             seq_group.sampling_params.max_tokens)
+                    max_token_capacity_requests.append(
+                            seq_group.metrics.max_token_capacity)
                     finished_reason_requests.extend([
                         SequenceStatus.get_finished_reason(seq.status)
                         for seq in seq_group.get_finished_seqs()
@@ -1811,13 +1823,14 @@ class LLMEngine:
             time_in_queue_requests=time_in_queue_requests,
             model_forward_time_requests=model_forward_time_requests,
             model_execute_time_requests=model_execute_time_requests,
+            model_load_time_requests=model_load_time_requests,
             #   Metadata
             num_prompt_tokens_requests=num_prompt_tokens_requests,
             num_generation_tokens_requests=num_generation_tokens_requests,
-            max_num_generation_tokens_requests=
-            max_num_generation_tokens_requests,
+            max_num_generation_tokens_requests=max_num_generation_tokens_requests,
             n_requests=n_requests,
             max_tokens_requests=max_tokens_requests,
+            max_token_capacity_requests=max_token_capacity_requests,
             finished_reason_requests=finished_reason_requests,
             max_lora=str(max_lora_stat),
             waiting_lora_adapters=list(waiting_lora_adapters.keys()),
