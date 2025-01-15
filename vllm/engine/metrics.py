@@ -197,6 +197,12 @@ class Metrics:
             "Histogram of time spent in the model execute function in ms.",
             labelnames=labelnames,
             buckets=build_1_2_3_5_8_buckets(3000))
+        self.histogram_time_per_prefill_token_requests = self._histogram_cls(
+            name="vllm:time_per_prefill_token_requests_milliseconds",
+            documentation=
+            "Histogram of time spent per prefill token request in ms.",
+            labelnames=labelnames,
+            buckets=request_latency_buckets)
         self.gauge_model_load_time_request = self._gauge_cls(
             name="vllm:model_load_time_seconds",
             documentation="time spent in the model loading in s.",
@@ -622,10 +628,14 @@ class PrometheusStatLogger(StatLoggerBase):
                             stats.time_decode_requests)
         self._log_histogram(self.metrics.histogram_time_in_queue_request,
                             stats.time_in_queue_requests)
+        self._log_histogram(self.metrics.histogram_time_per_prefill_token_requests,
+                            stats.time_per_prefill_token_requests)
         self._log_histogram(self.metrics.histogram_model_forward_time_request,
                             stats.model_forward_time_requests)
         self._log_histogram(self.metrics.histogram_model_execute_time_request,
                             stats.model_execute_time_requests)
+        self._log_histogram(self.metrics.histogram_time_per_prefill_token_requests,
+                            stats.time_per_prefill_token_requests)
         self._log_gauge(self.metrics.gauge_model_load_time_requests,
                         stats.model_load_time_requests)
         # Metadata

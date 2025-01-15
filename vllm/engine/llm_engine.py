@@ -1738,6 +1738,10 @@ class LLMEngine:
                             now - seq_group.metrics.first_token_time)
                         time_inference_requests.append(
                             now - seq_group.metrics.first_scheduled_time)
+                        time_per_prefill_token_requests.append(
+                            (seq_group.metrics.first_token_time -
+                            seq_group.metrics.first_scheduled_time) / seq_group.num_seqs()
+                        )
                     if seq_group.metrics.time_in_queue is not None:
                         time_in_queue_requests.append(
                             seq_group.metrics.time_in_queue)
@@ -1747,9 +1751,12 @@ class LLMEngine:
                     if seq_group.metrics.model_execute_time is not None:
                         model_execute_time_requests.append(
                             seq_group.metrics.model_execute_time * 1000)
-                    if seq_group.metrics.model_execute_time is not None:
+                    if seq_group.metrics.model_load_time is not None:
                         model_load_time_requests.append(
                             seq_group.metrics.model_load_time)
+                    if seq_group.metrics.time_per_prefill_token is not None:
+                        time_per_prefill_token_requests.append(
+                            seq_group.metrics.time_per_prefill_token * 1000)
                     # Metadata
                     num_prompt_tokens_requests.append(
                         len(seq_group.prompt_token_ids))
@@ -1821,6 +1828,7 @@ class LLMEngine:
             time_prefill_requests=time_prefill_requests,
             time_decode_requests=time_decode_requests,
             time_in_queue_requests=time_in_queue_requests,
+            time_per_prefill_token_requests=time_per_prefill_token_requests,
             model_forward_time_requests=model_forward_time_requests,
             model_execute_time_requests=model_execute_time_requests,
             model_load_time_requests=model_load_time_requests,
