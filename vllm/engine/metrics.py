@@ -245,6 +245,12 @@ class Metrics:
             documentation="Maximum token capacity in tokens.",
             labelnames=labelnames,
             multiprocess_mode="sum")
+        self.gauge_total_tokens_in_current_batch = self._gauge_cls(
+            name="vllm_total_tokens_in_current_batch",
+            documentation="Total number of tokens being processed in the current batch",
+            labelnames=labelnames,
+            multiprocess_mode="sum"
+        )
         self.counter_request_success = self._counter_cls(
             name="vllm:request_success_total",
             documentation="Count of successfully processed requests.",
@@ -657,6 +663,8 @@ class PrometheusStatLogger(StatLoggerBase):
                             stats.max_tokens_requests)
         self._log_gauge(self.metrics.gauge_max_token_capacity_requests,
                         stats.max_token_capacity_requests)
+        self._log_gauge(self.metrics.gauge_total_tokens_in_current_batch_requests,
+                        stats.total_tokens_in_current_batch_requests)
 
     def _log_prometheus_interval(self, prompt_throughput: float,
                                  generation_throughput: float) -> None:

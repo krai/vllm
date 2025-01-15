@@ -1661,6 +1661,9 @@ class LLMEngine:
         # NOTE: This loop assumes prefill seq_groups are before
         # decode seq_groups in scheduled_seq_groups.
         if scheduler_outputs is not None:
+            # Track total tokens in current batch
+            total_tokens_in_current_batch = 0
+            
             # For async postprocessor, already finished sequences need to be
             # not counted (to avoid double counting)
             actual_num_batched_tokens = scheduler_outputs.num_batched_tokens  # type: ignore
@@ -1685,6 +1688,14 @@ class LLMEngine:
 
                 group_was_prefill = idx < scheduler_outputs.num_prefill_groups
                 seq_group = scheduled_seq_group.seq_group
+
+                # Add token counting for current batch
+                if group_was_prefill:
+                    total_tokens_in_current_batch += scheduled_seq_group.token_chunk_size
+                else:
+                    total_tokens_in_current_batch += (
+                        1 if seq_group.state.current_step == 0
+                        else seq_group.state.current_step)
 
                 # NOTE: a seq_group that completed all of its prefill tokens
                 # in the last iteration will have seq_group.is_prefill() = False
@@ -1767,6 +1778,7 @@ class LLMEngine:
                     max_num_generation_tokens_requests.append(
                         max(seq.get_output_len()
                             for seq in seq_group.get_seqs()))
+                    total_tokens_in_current_batch_requests.append(total_tokens_in_current_batch)
                     if seq_group.sampling_params is not None:
                         n_requests.append(seq_group.sampling_params.n)
                         max_tokens_requests.append(
@@ -1839,6 +1851,7 @@ class LLMEngine:
             n_requests=n_requests,
             max_tokens_requests=max_tokens_requests,
             max_token_capacity_requests=max_token_capacity_requests,
+            total_tokens_in_current_batch_requests=total_tokens_in_current_batch_requests,
             finished_reason_requests=finished_reason_requests,
             max_lora=str(max_lora_stat),
             waiting_lora_adapters=list(waiting_lora_adapters.keys()),
