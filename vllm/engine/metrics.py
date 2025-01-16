@@ -251,6 +251,11 @@ class Metrics:
             labelnames=labelnames,
             multiprocess_mode="sum"
         )
+        self.gauge_total_tokens_in_queue_requests = self._gauge_cls(
+            name="vllm:total_tokens_in_queue_requests",
+            documentation="Total number of tokens in queue (prefill + decode).",
+            labelnames=labelnames,
+            multiprocess_mode="sum")
         self.counter_request_success = self._counter_cls(
             name="vllm:request_success_total",
             documentation="Count of successfully processed requests.",
@@ -665,7 +670,9 @@ class PrometheusStatLogger(StatLoggerBase):
                         stats.max_token_capacity_requests)
         self._log_gauge(self.metrics.gauge_total_tokens_in_current_batch_requests,
                         stats.total_tokens_in_current_batch_requests)
-
+        self._log_gauge(self.metrics.gauge_total_tokens_in_queue_requests,
+                        stats.total_tokens_in_queue_requests)
+        
     def _log_prometheus_interval(self, prompt_throughput: float,
                                  generation_throughput: float) -> None:
         # Logs metrics to prometheus that are computed every logging_interval.
