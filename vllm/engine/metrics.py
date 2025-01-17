@@ -118,6 +118,11 @@ class Metrics:
             name="vllm:tokens_total",
             documentation="Number of prefill plus generation tokens processed.",
             labelnames=labelnames)
+        self.requests_with_evicted_tokens = Counter_cls(
+            name="vllm:requests_evicted_tokens_total",
+            documentation="Number of requests that had tokens evicted from KV cache",
+            labelnames=labelnames
+        )
         buckets = [1, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8096]
         if not vllm_config.model_config.enforce_eager:
             buckets = vllm_config.compilation_config.capture_sizes.copy()
@@ -655,6 +660,8 @@ class PrometheusStatLogger(StatLoggerBase):
         self._log_counter_labels(self.metrics.counter_request_success,
                                  finished_reason_counter,
                                  Metrics.labelname_finish_reason)
+        self._log_counter(self.metrics.counter_requests_with_evicted_tokens,
+                          stats.request_with_evicted_tokens_requests)
         self._log_histogram(self.metrics.histogram_num_prompt_tokens_request,
                             stats.num_prompt_tokens_requests)
         self._log_histogram(
@@ -715,6 +722,17 @@ class PrometheusStatLogger(StatLoggerBase):
             self._log_prometheus_interval(
                 prompt_throughput=prompt_throughput,
                 generation_throughput=generation_throughput)
+
+        # Log requests with evicted tokens
+        if stats.request_with_evicted_tokens_requests:
+            # Count requests that had any evictions
+            num_requests_with_evictions = sum(1 for had_eviction in 
+                stats.request_with_evicted_tokens_requests if had_eviction)
+            
+            if num_requests_with_evictions > 0:
+                self.requests_with_evicted_tokens.labels(
+                    model_name=self.labels["model_name"]
+                ).inc(num_requests_with_evictions)
 
             if self.spec_decode_metrics is not None:
                 self._log_gauge(

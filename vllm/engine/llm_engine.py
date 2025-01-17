@@ -1635,7 +1635,7 @@ class LLMEngine:
         max_token_capacity_requests: List[int] = []
         total_tokens_in_current_batch_requests: List[int] = []
         total_tokens_in_queue_requests: List[int] = []
-        request_with_evicted_tokens_requests: List[int] = []
+        request_with_evicted_tokens_requests: List[bool] = []  
         total_evicted_tokens_requests: List[int] = []
         finished_reason_requests: List[str] = []
 
@@ -1800,6 +1800,10 @@ class LLMEngine:
                         for seq in seq_group.get_finished_seqs()
                     ])
                     total_tokens_in_queue_requests.append(total_tokens_in_queue)
+                    # Track if this request had any token evictions
+                    had_evicted_tokens = any(seq.get_num_evicted_tokens() > 0 
+                                             for seq in seq_group.get_seqs())
+                    request_with_evicted_tokens_requests.append(had_evicted_tokens)
 
             # Number of generation tokens.
             #   num_batched_tokens equals the number of prompt_tokens plus the
