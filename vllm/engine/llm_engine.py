@@ -1804,6 +1804,11 @@ class LLMEngine:
                     had_evicted_tokens = any(seq.get_num_evicted_tokens() > 0 
                                              for seq in seq_group.get_seqs())
                     request_with_evicted_tokens_requests.append(had_evicted_tokens)
+                    
+                    # Track total number of evicted tokens
+                    total_evicted = sum(seq.get_num_evicted_tokens() 
+                                       for seq in seq_group.get_seqs())
+                    total_evicted_tokens_requests.append(total_evicted)
 
             # Number of generation tokens.
             #   num_batched_tokens equals the number of prompt_tokens plus the
@@ -1871,7 +1876,10 @@ class LLMEngine:
             finished_reason_requests=finished_reason_requests,
             max_lora=str(max_lora_stat),
             waiting_lora_adapters=list(waiting_lora_adapters.keys()),
-            running_lora_adapters=list(running_lora_adapters.keys()))
+            running_lora_adapters=list(running_lora_adapters.keys()),
+            request_with_evicted_tokens_requests=request_with_evicted_tokens_requests,
+            total_evicted_tokens_requests=total_evicted_tokens_requests,
+        )
 
     def add_lora(self, lora_request: LoRARequest) -> bool:
         return self.model_executor.add_lora(lora_request)

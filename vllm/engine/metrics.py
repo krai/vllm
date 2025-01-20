@@ -118,9 +118,14 @@ class Metrics:
             name="vllm:tokens_total",
             documentation="Number of prefill plus generation tokens processed.",
             labelnames=labelnames)
-        self.requests_with_evicted_tokens = Counter_cls(
+        self.counter_requests_with_evicted_tokens = self._counter_cls(
             name="vllm:requests_evicted_tokens_total",
             documentation="Number of requests that had tokens evicted from KV cache",
+            labelnames=labelnames
+        )
+        self.counter_total_evicted_tokens = self._counter_cls(
+            name="vllm:total_evicted_tokens",
+            documentation="Total number of tokens evicted from KV cache",
             labelnames=labelnames
         )
         buckets = [1, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8096]
@@ -654,6 +659,22 @@ class PrometheusStatLogger(StatLoggerBase):
                             stats.time_per_prefill_token_requests)
         self._log_gauge(self.metrics.gauge_model_load_time_requests,
                         stats.model_load_time_requests)
+
+        # Token eviction metrics
+        num_requests_with_evictions = sum(
+            1 for had_eviction in stats.request_with_evicted_tokens_requests
+            if had_eviction)
+        if num_requests_with_evictions > 0:
+            self.metrics.counter_requests_with_evicted_tokens.labels(
+                **self.labels
+            ).inc(num_requests_with_evictions)
+
+        total_evicted = sum(stats.total_evicted_tokens_requests)
+        if total_evicted > 0:
+            self.metrics.counter_total_evicted_tokens.labels(
+                **self.labels
+            ).inc(total_evicted)
+
         # Metadata
         finished_reason_counter = CollectionsCounter(
             stats.finished_reason_requests)
@@ -662,6 +683,8 @@ class PrometheusStatLogger(StatLoggerBase):
                                  Metrics.labelname_finish_reason)
         self._log_counter(self.metrics.counter_requests_with_evicted_tokens,
                           stats.request_with_evicted_tokens_requests)
+        self._log_counter(self.metrics.counter_total_evicted_tokens,
+                          stats.total_evicted_tokens_requests)
         self._log_histogram(self.metrics.histogram_num_prompt_tokens_request,
                             stats.num_prompt_tokens_requests)
         self._log_histogram(
@@ -723,16 +746,6 @@ class PrometheusStatLogger(StatLoggerBase):
                 prompt_throughput=prompt_throughput,
                 generation_throughput=generation_throughput)
 
-        # Log requests with evicted tokens
-        if stats.request_with_evicted_tokens_requests:
-            # Count requests that had any evictions
-            num_requests_with_evictions = sum(1 for had_eviction in 
-                stats.request_with_evicted_tokens_requests if had_eviction)
-            
-            if num_requests_with_evictions > 0:
-                self.requests_with_evicted_tokens.labels(
-                    model_name=self.labels["model_name"]
-                ).inc(num_requests_with_evictions)
 
             if self.spec_decode_metrics is not None:
                 self._log_gauge(
