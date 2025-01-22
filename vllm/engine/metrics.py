@@ -207,7 +207,7 @@ class Metrics:
             "Histogram of time spent in the model execute function in ms.",
             labelnames=labelnames,
             buckets=build_1_2_3_5_8_buckets(3000))
-        self.histogram_time_per_prefill_token_requests = self._histogram_cls(
+        self.histogram_time_per_prefill_token_request = self._histogram_cls(
             name="vllm:time_per_prefill_token_requests_milliseconds",
             documentation=
             "Histogram of time spent per prefill token request in ms.",
@@ -255,13 +255,13 @@ class Metrics:
             documentation="Maximum token capacity in tokens.",
             labelnames=labelnames,
             multiprocess_mode="sum")
-        self.gauge_total_tokens_in_current_batch = self._gauge_cls(
+        self.gauge_total_tokens_in_current_batch_request = self._gauge_cls(
             name="vllm_total_tokens_in_current_batch",
             documentation="Total number of tokens being processed in the current batch",
             labelnames=labelnames,
             multiprocess_mode="sum"
         )
-        self.gauge_total_tokens_in_queue_requests = self._gauge_cls(
+        self.gauge_total_tokens_in_queue_request = self._gauge_cls(
             name="vllm:total_tokens_in_queue_requests",
             documentation="Total number of tokens in queue (prefill + decode).",
             labelnames=labelnames,
@@ -649,15 +649,14 @@ class PrometheusStatLogger(StatLoggerBase):
                             stats.time_decode_requests)
         self._log_histogram(self.metrics.histogram_time_in_queue_request,
                             stats.time_in_queue_requests)
-        self._log_histogram(self.metrics.histogram_time_per_prefill_token_requests,
+        self._log_histogram(self.metrics.histogram_time_per_prefill_token_request,
                             stats.time_per_prefill_token_requests)
         self._log_histogram(self.metrics.histogram_model_forward_time_request,
                             stats.model_forward_time_requests)
         self._log_histogram(self.metrics.histogram_model_execute_time_request,
                             stats.model_execute_time_requests)
-        self._log_histogram(self.metrics.histogram_time_per_prefill_token_requests,
-                            stats.time_per_prefill_token_requests)
-        self._log_gauge(self.metrics.gauge_model_load_time_requests,
+
+        self._log_gauge(self.metrics.gauge_model_load_time_request,
                         stats.model_load_time_requests)
 
         # Token eviction metrics
@@ -696,11 +695,11 @@ class PrometheusStatLogger(StatLoggerBase):
             stats.max_num_generation_tokens_requests)
         self._log_histogram(self.metrics.histogram_max_tokens_request,
                             stats.max_tokens_requests)
-        self._log_gauge(self.metrics.gauge_max_token_capacity_requests,
+        self._log_gauge(self.metrics.gauge_max_token_capacity_request,
                         stats.max_token_capacity_requests)
-        self._log_gauge(self.metrics.gauge_total_tokens_in_current_batch_requests,
+        self._log_gauge(self.metrics.gauge_total_tokens_in_current_batch_request,
                         stats.total_tokens_in_current_batch_requests)
-        self._log_gauge(self.metrics.gauge_total_tokens_in_queue_requests,
+        self._log_gauge(self.metrics.gauge_total_tokens_in_queue_request,
                         stats.total_tokens_in_queue_requests)
         
     def _log_prometheus_interval(self, prompt_throughput: float,
