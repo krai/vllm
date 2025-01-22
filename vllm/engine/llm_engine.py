@@ -1791,10 +1791,12 @@ class LLMEngine:
                     total_tokens_in_current_batch_requests.append(total_tokens_in_current_batch)
                     if seq_group.sampling_params is not None:
                         n_requests.append(seq_group.sampling_params.n)
-                        max_tokens_requests.append(
-                            seq_group.sampling_params.max_tokens)
-                    max_token_capacity_requests.append(
-                            seq_group.metrics.max_token_capacity)
+                        max_tokens = seq_group.sampling_params.max_tokens
+                        max_tokens_requests.append(max_tokens)
+                        # Update max token capacity as prompt tokens + max generation tokens
+                        max_token_capacity = len(seq_group.prompt_token_ids) + max_tokens
+                        seq_group.metrics.max_token_capacity = max_token_capacity
+                        max_token_capacity_requests.append(max_token_capacity)
                     finished_reason_requests.extend([
                         SequenceStatus.get_finished_reason(seq.status)
                         for seq in seq_group.get_finished_seqs()
