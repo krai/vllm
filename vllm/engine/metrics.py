@@ -655,24 +655,37 @@ class PrometheusStatLogger(StatLoggerBase):
                             stats.model_forward_time_requests)
         self._log_histogram(self.metrics.histogram_model_execute_time_request,
                             stats.model_execute_time_requests)
-
-        self._log_gauge(self.metrics.gauge_model_load_time_request,
-                        stats.model_load_time_requests)
+        # Total tokens metrics
+        if stats.total_tokens_in_current_batch_requests:
+            self._log_gauge(self.metrics.gauge_total_tokens_in_current_batch_request,
+                          sum(stats.total_tokens_in_current_batch_requests))
+        
+        if stats.total_tokens_in_queue_requests:
+            self._log_gauge(self.metrics.gauge_total_tokens_in_queue_request,
+                          sum(stats.total_tokens_in_queue_requests))
+        
+        # Model load time
+        if stats.model_load_time_requests:
+            logger.info(f"Model load time requests present: {stats.model_load_time_requests}")
+            mean_load_time = float(np.mean(stats.model_load_time_requests))
+            logger.info(f"Mean model load time: {mean_load_time:.4f} seconds")
+            self._log_gauge(self.metrics.gauge_model_load_time_request,
+                          mean_load_time)
+        else:
+            logger.info("No model load time requests in this update")
 
         # Token eviction metrics
-        num_requests_with_evictions = sum(
-            1 for had_eviction in stats.request_with_evicted_tokens_requests
-            if had_eviction)
-        if num_requests_with_evictions > 0:
-            self.metrics.counter_requests_with_evicted_tokens.labels(
-                **self.labels
-            ).inc(num_requests_with_evictions)
+        if stats.request_with_evicted_tokens_requests:
+            num_requests_with_evictions = sum(stats.request_with_evicted_tokens_requests)
+            if num_requests_with_evictions > 0:
+                self._log_counter(self.metrics.counter_requests_with_evicted_tokens,
+                              num_requests_with_evictions)
 
-        total_evicted = sum(stats.total_evicted_tokens_requests)
-        if total_evicted > 0:
-            self.metrics.counter_total_evicted_tokens.labels(
-                **self.labels
-            ).inc(total_evicted)
+        if stats.total_evicted_tokens_requests:
+            total_evicted = sum(stats.total_evicted_tokens_requests)
+            if total_evicted > 0:
+                self._log_counter(self.metrics.counter_total_evicted_tokens,
+                              total_evicted)
 
         # Metadata
         finished_reason_counter = CollectionsCounter(
@@ -680,10 +693,6 @@ class PrometheusStatLogger(StatLoggerBase):
         self._log_counter_labels(self.metrics.counter_request_success,
                                  finished_reason_counter,
                                  Metrics.labelname_finish_reason)
-        self._log_counter(self.metrics.counter_requests_with_evicted_tokens,
-                          stats.request_with_evicted_tokens_requests)
-        self._log_counter(self.metrics.counter_total_evicted_tokens,
-                          stats.total_evicted_tokens_requests)
         self._log_histogram(self.metrics.histogram_num_prompt_tokens_request,
                             stats.num_prompt_tokens_requests)
         self._log_histogram(
@@ -695,13 +704,10 @@ class PrometheusStatLogger(StatLoggerBase):
             stats.max_num_generation_tokens_requests)
         self._log_histogram(self.metrics.histogram_max_tokens_request,
                             stats.max_tokens_requests)
-        self._log_gauge(self.metrics.gauge_max_token_capacity_request,
-                        stats.max_token_capacity_requests)
-        self._log_gauge(self.metrics.gauge_total_tokens_in_current_batch_request,
-                        stats.total_tokens_in_current_batch_requests)
-        self._log_gauge(self.metrics.gauge_total_tokens_in_queue_request,
-                        stats.total_tokens_in_queue_requests)
-        
+        if stats.max_token_capacity_requests:
+            self._log_gauge(self.metrics.gauge_max_token_capacity_request,
+                          max(stats.max_token_capacity_requests))
+
     def _log_prometheus_interval(self, prompt_throughput: float,
                                  generation_throughput: float) -> None:
         # Logs metrics to prometheus that are computed every logging_interval.
