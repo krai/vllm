@@ -215,10 +215,11 @@ class Metrics:
             buckets=request_latency_buckets)
         self.gauge_model_load_time_request = self._gauge_cls(
             name="vllm:model_load_time_seconds",
-            documentation="time spent in the model loading in s.",
+            documentation="Time spent in model loading in seconds (disk + GPU).",
             labelnames=labelnames,
             multiprocess_mode="sum")
-        #   Metadata
+
+        # Metadata
         self.histogram_num_prompt_tokens_request = self._histogram_cls(
             name="vllm:request_prompt_tokens",
             documentation="Number of prefill tokens processed.",
@@ -655,6 +656,11 @@ class PrometheusStatLogger(StatLoggerBase):
                             stats.model_forward_time_requests)
         self._log_histogram(self.metrics.histogram_model_execute_time_request,
                             stats.model_execute_time_requests)
+        # Model load time
+        if stats.model_load_time_requests: 
+            self._log_gauge(self.metrics.gauge_model_load_time_request,
+                            sum(stats.model_load_time_requests))
+
         # Total tokens metrics
         if stats.total_tokens_in_current_batch_requests:
             self._log_gauge(self.metrics.gauge_total_tokens_in_current_batch_request,
@@ -664,16 +670,6 @@ class PrometheusStatLogger(StatLoggerBase):
             self._log_gauge(self.metrics.gauge_total_tokens_in_queue_request,
                           sum(stats.total_tokens_in_queue_requests))
         
-        # Model load time
-        if stats.model_load_time_requests:
-            logger.info(f"Model load time requests present: {stats.model_load_time_requests}")
-            mean_load_time = float(np.mean(stats.model_load_time_requests))
-            logger.info(f"Mean model load time: {mean_load_time:.4f} seconds")
-            self._log_gauge(self.metrics.gauge_model_load_time_request,
-                          mean_load_time)
-        else:
-            logger.info("No model load time requests in this update")
-
         # Token eviction metrics
         if stats.request_with_evicted_tokens_requests:
             num_requests_with_evictions = sum(stats.request_with_evicted_tokens_requests)

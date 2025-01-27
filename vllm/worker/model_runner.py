@@ -1095,11 +1095,14 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
 
     def load_model(self) -> None:
         logger.info("Starting to load model %s...", self.model_config.model)
+        start_time = time.time()
         with DeviceMemoryProfiler() as m:
             self.model = get_model(vllm_config=self.vllm_config)
 
         self.model_memory_usage = m.consumed_memory
-        logger.info("Loading model weights took %.4f GB",
+        self.model_load_time = time.time() - start_time
+        logger.info("Loading model weights took %.4f seconds (%.4f GB)",
+                    self.model_load_time,
                     self.model_memory_usage / float(2**30))
 
         if self.lora_config:

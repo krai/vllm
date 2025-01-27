@@ -1667,28 +1667,25 @@ class LLMEngine:
                 for scheduler in self.scheduler:
                     for waiting_seq_group in scheduler.waiting:
                         # Add prompt tokens
-                        total_tokens_in_queue += len(waiting_seq_group.prompt_token_ids)
+                        prompt_length = len(waiting_seq_group.prompt_token_ids)
+                        total_tokens_in_queue += prompt_length
                         # Add expected generation tokens
                         if waiting_seq_group.sampling_params:
                             total_tokens_in_queue += waiting_seq_group.sampling_params.max_tokens
 
-                # NOTE: a seq_group that completed all of its prefill tokens
-                # in the last iteration will have seq_group.is_prefill() = False
-                # with group_was_prefill = True
-                if group_was_prefill:
-                    # Number of prompt tokens.
-                    num_prompt_tokens_iter += (
-                        scheduled_seq_group.token_chunk_size)
+                # Number of prompt tokens.
+                num_prompt_tokens_iter += (
+                    scheduled_seq_group.token_chunk_size)
 
-                    # If the seq_group just finished the prefill state
-                    # get TTFT.
-                    if not seq_group.is_prefill():
-                        latency = seq_group.get_last_token_latency()
-                        time_to_first_tokens_iter.append(latency)
+                # If the seq_group just finished the prefill state
+                # get TTFT.
+                if not seq_group.is_prefill():
+                    latency = seq_group.get_last_token_latency()
+                    time_to_first_tokens_iter.append(latency)
 
-                        # One generation token per finished prefill.
-                        num_generation_tokens_from_prefill_groups += (
-                            seq_group.num_seqs())
+                    # One generation token per finished prefill.
+                    num_generation_tokens_from_prefill_groups += (
+                        seq_group.num_seqs())
                 else:
                     # TPOTs.
                     latency = seq_group.get_last_token_latency()
@@ -1737,9 +1734,6 @@ class LLMEngine:
                     if seq_group.metrics.model_execute_time is not None:
                         model_execute_time_requests.append(
                             seq_group.metrics.model_execute_time * 1000)
-                    if seq_group.metrics.model_load_time is not None:
-                        model_load_time_requests.append(
-                            seq_group.metrics.model_load_time)
                     if seq_group.metrics.time_per_prefill_token is not None:
                         time_per_prefill_token_requests.append(
                             seq_group.metrics.time_per_prefill_token * 1000)
@@ -1795,6 +1789,14 @@ class LLMEngine:
             spec_decode_metrics = model_output[0].spec_decode_worker_metrics
         else:
             spec_decode_metrics = None
+
+        # Time to load a Model
+        if hasattr(self.model_executor, 'model_loader'):
+            model_disk_load_time = getattr(self.model_executor.model_loader, 'model_disk_load_time', 0.0)
+            model_gpu_load_time = getattr(self.model_executor.model_loader, 'model_gpu_load_time', 0.0)
+            total_load_time = model_disk_load_time + model_gpu_load_time
+            model_load_time_requests.append(total_load_time)
+            logger.info(f"Model load times - Disk: {model_disk_load_time:.2f}s, GPU: {model_gpu_load_time:.2f}s, Total: {total_load_time:.2f}s")
 
         return Stats(
             now=now,
