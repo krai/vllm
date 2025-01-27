@@ -119,15 +119,13 @@ class Metrics:
             documentation="Number of prefill plus generation tokens processed.",
             labelnames=labelnames)
         self.counter_requests_with_evicted_tokens = self._counter_cls(
-            name="vllm:requests_evicted_tokens_total",
+            name="vllm:requests_with_evicted_tokens_total",
             documentation="Number of requests that had tokens evicted from KV cache",
-            labelnames=labelnames
-        )
+            labelnames=labelnames)
         self.counter_total_evicted_tokens = self._counter_cls(
-            name="vllm:total_evicted_tokens",
+            name="vllm:total_evicted_tokens_total",
             documentation="Total number of tokens evicted from KV cache",
-            labelnames=labelnames
-        )
+            labelnames=labelnames)
         buckets = [1, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8096]
         if not vllm_config.model_config.enforce_eager:
             buckets = vllm_config.compilation_config.capture_sizes.copy()
@@ -657,9 +655,8 @@ class PrometheusStatLogger(StatLoggerBase):
         self._log_histogram(self.metrics.histogram_model_execute_time_request,
                             stats.model_execute_time_requests)
         # Model load time
-        if stats.model_load_time_requests: 
-            self._log_gauge(self.metrics.gauge_model_load_time_request,
-                            sum(stats.model_load_time_requests))
+        model_load_time = sum(stats.model_load_time_requests) if stats.model_load_time_requests else 0
+        self._log_gauge(self.metrics.gauge_model_load_time_request, model_load_time)
 
         # Total tokens metrics
         if stats.total_tokens_in_current_batch_requests:
@@ -671,17 +668,11 @@ class PrometheusStatLogger(StatLoggerBase):
                           sum(stats.total_tokens_in_queue_requests))
         
         # Token eviction metrics
-        if stats.request_with_evicted_tokens_requests:
-            num_requests_with_evictions = sum(stats.request_with_evicted_tokens_requests)
-            if num_requests_with_evictions > 0:
-                self._log_counter(self.metrics.counter_requests_with_evicted_tokens,
-                              num_requests_with_evictions)
+        num_requests_with_evictions = len([x for x in stats.request_with_evicted_tokens_requests if x]) if stats.request_with_evicted_tokens_requests else 0
+        self._log_counter(self.metrics.counter_requests_with_evicted_tokens, num_requests_with_evictions)
 
-        if stats.total_evicted_tokens_requests:
-            total_evicted = sum(stats.total_evicted_tokens_requests)
-            if total_evicted > 0:
-                self._log_counter(self.metrics.counter_total_evicted_tokens,
-                              total_evicted)
+        total_evicted = sum(stats.total_evicted_tokens_requests) if stats.total_evicted_tokens_requests else 0
+        self._log_counter(self.metrics.counter_total_evicted_tokens, total_evicted)
 
         # Metadata
         finished_reason_counter = CollectionsCounter(

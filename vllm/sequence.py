@@ -110,6 +110,7 @@ class RequestMetrics:
         model_execute_time: The time spent in the model execute function. This
                            will include model forward, block/sync across
                            workers, cpu-gpu sync time and sampling time.
+        time_per_prefill_token: The time spent in the prefill stage.
     """
     arrival_time: float
     last_token_time: float
@@ -120,6 +121,7 @@ class RequestMetrics:
     scheduler_time: Optional[float] = None
     model_forward_time: Optional[float] = None
     model_execute_time: Optional[float] = None
+    time_per_prefill_token: Optional[float] = None
 
 
 class SequenceDataDelta(
@@ -457,7 +459,7 @@ class Sequence:
         return self.inputs.token_type_ids
 
     @property
-    def multi_modal_data(self) -> "MultiModalDataDict":
+    def multi_modal_data(self) -> MultiModalDataDict:
         return self.inputs.multi_modal_data
 
     @property
