@@ -1654,6 +1654,9 @@ class LLMEngine:
                 group_was_prefill = idx < scheduler_outputs.num_prefill_groups
                 seq_group = scheduled_seq_group.seq_group
 
+                # NOTE: a seq_group that completed all of its prefill tokens
+                # in the last iteration will have seq_group.is_prefill() = False
+                # with group_was_prefill = True
                 # Add token counting for current batch
                 if group_was_prefill:
                     total_tokens_in_current_batch += scheduled_seq_group.token_chunk_size
@@ -1750,8 +1753,7 @@ class LLMEngine:
                     total_tokens_in_current_batch_requests.append(total_tokens_in_current_batch)
                     if seq_group.sampling_params is not None:
                         n_requests.append(seq_group.sampling_params.n)
-                        max_tokens = seq_group.sampling_params.max_tokens
-                        max_tokens_requests.append(max_tokens)
+                        max_tokens_requests.append(seq_group.sampling_params.max_tokens)
                         # Update max token capacity as prompt tokens + max generation tokens
                         max_token_capacity = len(seq_group.prompt_token_ids) + max_tokens
                         seq_group.metrics.max_token_capacity = max_token_capacity
