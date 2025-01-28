@@ -120,7 +120,8 @@ class Metrics:
             labelnames=labelnames)
         self.counter_requests_with_evicted_tokens = self._counter_cls(
             name="vllm:requests_with_evicted_tokens_total",
-            documentation="Number of requests that had tokens evicted from KV cache",
+            documentation=
+            "Number of requests that had tokens evicted from KV cache",
             labelnames=labelnames)
         self.counter_total_evicted_tokens = self._counter_cls(
             name="vllm:total_evicted_tokens_total",
@@ -214,7 +215,8 @@ class Metrics:
             buckets=request_latency_buckets)
         self.gauge_model_load_time_request = self._gauge_cls(
             name="vllm:model_load_time_seconds",
-            documentation="Time spent in model loading in seconds (disk + GPU).",
+            documentation=
+            "Time spent in model loading in seconds (disk + GPU).",
             labelnames=labelnames,
             multiprocess_mode="sum")
 
@@ -257,10 +259,10 @@ class Metrics:
             multiprocess_mode="sum")
         self.gauge_total_tokens_in_current_batch_request = self._gauge_cls(
             name="vllm_total_tokens_in_current_batch",
-            documentation="Total number of tokens being processed in the current batch",
+            documentation=
+            "Total number of tokens being processed in the current batch",
             labelnames=labelnames,
-            multiprocess_mode="sum"
-        )
+            multiprocess_mode="sum")
         self.gauge_total_tokens_in_queue_request = self._gauge_cls(
             name="vllm:total_tokens_in_queue_requests",
             documentation="Total number of tokens in queue (prefill + decode).",
@@ -634,31 +636,40 @@ class PrometheusStatLogger(StatLoggerBase):
                             stats.time_decode_requests)
         self._log_histogram(self.metrics.histogram_time_in_queue_request,
                             stats.time_in_queue_requests)
-        self._log_histogram(self.metrics.histogram_time_per_prefill_token_request,
-                            stats.time_per_prefill_token_requests)
+        self._log_histogram(
+            self.metrics.histogram_time_per_prefill_token_request,
+            stats.time_per_prefill_token_requests)
         self._log_histogram(self.metrics.histogram_model_forward_time_request,
                             stats.model_forward_time_requests)
         self._log_histogram(self.metrics.histogram_model_execute_time_request,
                             stats.model_execute_time_requests)
         # Model load time
-        model_load_time = sum(stats.model_load_time_requests) if stats.model_load_time_requests else 0
-        self._log_gauge(self.metrics.gauge_model_load_time_request, model_load_time)
+        model_load_time = sum(stats.model_load_time_requests
+                              ) if stats.model_load_time_requests else 0
+        self._log_gauge(self.metrics.gauge_model_load_time_request,
+                        model_load_time)
 
         # Total tokens metrics
         if stats.total_tokens_in_current_batch_requests:
-            self._log_gauge(self.metrics.gauge_total_tokens_in_current_batch_request,
-                          sum(stats.total_tokens_in_current_batch_requests))
+            self._log_gauge(
+                self.metrics.gauge_total_tokens_in_current_batch_request,
+                sum(stats.total_tokens_in_current_batch_requests))
         
         if stats.total_tokens_in_queue_requests:
             self._log_gauge(self.metrics.gauge_total_tokens_in_queue_request,
-                          sum(stats.total_tokens_in_queue_requests))
+                            sum(stats.total_tokens_in_queue_requests))
         
         # Token eviction metrics
-        num_requests_with_evictions = len([x for x in stats.request_with_evicted_tokens_requests if x]) if stats.request_with_evicted_tokens_requests else 0
-        self._log_counter(self.metrics.counter_requests_with_evicted_tokens, num_requests_with_evictions)
+        num_requests_with_evictions = len(
+            [x for x in stats.request_with_evicted_tokens_requests
+             if x]) if stats.request_with_evicted_tokens_requests else 0
+        self._log_counter(self.metrics.counter_requests_with_evicted_tokens, 
+                          num_requests_with_evictions)
 
-        total_evicted = sum(stats.total_evicted_tokens_requests) if stats.total_evicted_tokens_requests else 0
-        self._log_counter(self.metrics.counter_total_evicted_tokens, total_evicted)
+        total_evicted = sum(stats.total_evicted_tokens_requests
+                            ) if stats.total_evicted_tokens_requests else 0
+        self._log_counter(self.metrics.counter_total_evicted_tokens, 
+                          total_evicted)
 
         # Metadata
         finished_reason_counter = CollectionsCounter(
@@ -679,7 +690,7 @@ class PrometheusStatLogger(StatLoggerBase):
                             stats.max_tokens_requests)
         if stats.max_token_capacity_requests:
             self._log_gauge(self.metrics.gauge_max_token_capacity_request,
-                          max(stats.max_token_capacity_requests))
+                            max(stats.max_token_capacity_requests))
 
     def log(self, stats: Stats):
         """Logs to prometheus and tracked stats every iteration."""
