@@ -258,34 +258,9 @@ class DefaultModelLoader(BaseModelLoader):
             if fall_back_to_pt:
                 allow_patterns += ["*.pt"]
                 
-        if allow_patterns_overrides is not None:
-            allow_patterns = allow_patterns_overrides
+            if allow_patterns_overrides is not None:
+                allow_patterns = allow_patterns_overrides
 
-        if not is_local:
-            hf_folder = download_weights_from_hf(
-                model_name_or_path,
-                self.load_config.download_dir,
-                allow_patterns,
-                revision,
-                ignore_patterns=self.load_config.ignore_patterns,
-            )
-        else:
-            hf_folder = model_name_or_path
-
-        hf_weights_files: List[str] = []
-        for pattern in allow_patterns:
-            hf_weights_files += glob.glob(os.path.join(hf_folder, pattern))
-            if len(hf_weights_files) > 0:
-                if pattern == "*.safetensors":
-                    use_safetensors = True
-                break
-
-        if use_safetensors:
-            # For models like Mistral-7B-Instruct-v0.3
-            # there are both sharded safetensors files and a consolidated
-            # safetensors file. Using both breaks.
-            # Here, we download the `model.safetensors.index.json` and filter
-            # any files not found in the index.
             if not is_local:
                 hf_folder = download_weights_from_hf(
                     model_name_or_path,
@@ -306,32 +281,57 @@ class DefaultModelLoader(BaseModelLoader):
                     break
 
             if use_safetensors:
+            # For models like Mistral-7B-Instruct-v0.3
+            # there are both sharded safetensors files and a consolidated
+            # safetensors file. Using both breaks.
+            # Here, we download the `model.safetensors.index.json` and filter
+            # any files not found in the index.
+                if not is_local:
+                    hf_folder = download_weights_from_hf(
+                        model_name_or_path,
+                        self.load_config.download_dir,
+                        allow_patterns,
+                        revision,
+                        ignore_patterns=self.load_config.ignore_patterns,
+                    )
+                else:
+                    hf_folder = model_name_or_path
+
+                hf_weights_files: List[str] = []
+                for pattern in allow_patterns:
+                    hf_weights_files += glob.glob(os.path.join(hf_folder, pattern))
+                    if len(hf_weights_files) > 0:
+                        if pattern == "*.safetensors":
+                            use_safetensors = True
+                        break
+
+                if use_safetensors:
                 # For models like Mistral-7B-Instruct-v0.3
                 # there are both sharded safetensors files and a consolidated
                 # safetensors file. Using both breaks.
                 # Here, we download the `model.safetensors.index.json` and filter
                 # any files not found in the index.
-                if not is_local:
-                    download_safetensors_index_file_from_hf(
-                        model_name_or_path,
-                        index_file,
-                        self.load_config.download_dir,
-                        revision,
-                    )
-                hf_weights_files = filter_duplicate_safetensors_files(
-                    hf_weights_files, hf_folder, index_file)
-            else:
-                hf_weights_files = filter_files_not_needed_for_inference(
-                    hf_weights_files)
+                    if not is_local:
+                        download_safetensors_index_file_from_hf(
+                            model_name_or_path,
+                            index_file,
+                            self.load_config.download_dir,
+                            revision,
+                        )
+                    hf_weights_files = filter_duplicate_safetensors_files(
+                        hf_weights_files, hf_folder, index_file)
+                else:
+                    hf_weights_files = filter_files_not_needed_for_inference(
+                        hf_weights_files)
 
-            if len(hf_weights_files) == 0:
-                raise RuntimeError(
-                    f"Cannot find any model weights with `{model_name_or_path}`")
+                if len(hf_weights_files) == 0:
+                    raise RuntimeError(
+                        f"Cannot find any model weights with `{model_name_or_path}`")
 
-            return hf_folder, hf_weights_files, use_safetensors
+                return hf_folder, hf_weights_files, use_safetensors
         finally:
-                self.model_disk_load_time = time.time() - disk_load_start
-                logger.info(f"Model disk load time: {self.model_disk_load_time:.2f}s")
+            self.model_disk_load_time = time.time() - disk_load_start
+            logger.info(f"Model disk load time: {self.model_disk_load_time:.2f}s")
 
     def _get_weights_iterator(
             self, source: "Source"
