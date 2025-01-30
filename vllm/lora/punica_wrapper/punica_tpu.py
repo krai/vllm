@@ -22,6 +22,15 @@ class PunicaWrapperTPU(PunicaWrapperBase):
                  device: Union[torch.device, str], **kwargs):
         PunicaWrapperBase.__init__(self, max_num_batched_tokens, max_batches,
                                    device)
+        torch._dynamo.mark_dynamic(self._embeddings_indices, 1)
+
+    @property
+    def embeddings_indices(self) -> torch.Tensor:
+        """
+        This property provides access to the indices used for lora embeddings, 
+        specifically for VocabParallelEmbeddingWithLoRA.
+        """
+        return self._embeddings_indices[:]
 
     def _shrink_prefill(
         self,

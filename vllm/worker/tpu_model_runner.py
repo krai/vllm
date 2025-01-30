@@ -274,7 +274,7 @@ class TPUModelRunner(ModelRunnerBase[ModelInputForTPU]):
         t = torch.ones((batch_size, ), dtype=torch.float32, device=self.device)
         p = torch.ones((batch_size, ), dtype=torch.float32, device=self.device)
         num_samples = _MAX_NUM_SAMPLES if exec_mode.is_prefill() else 1
-        
+
         # Create a series of dummy loras and requests for them. Make to fill all lora slots.        
         if self.lora_config:
             dummy_lora_requests: Set[LoRARequest] = set()
@@ -305,21 +305,15 @@ class TPUModelRunner(ModelRunnerBase[ModelInputForTPU]):
         # graphs in the disk (VLLM_XLA_CACHE_PATH).
         if exec_mode.is_prefill():
             # Prefill
-            if self.lora_config is not None:
-                torch._dynamo.config.capture_dynamic_output_shape_ops = True
-            else:
-                torch._dynamo.mark_dynamic(token_ids, 1)
-                torch._dynamo.mark_dynamic(position_ids, 1)
+            torch._dynamo.mark_dynamic(token_ids, 1)
+            torch._dynamo.mark_dynamic(position_ids, 1)
             torch._dynamo.mark_dynamic(attn_metadata.slot_mapping, 1)
         else:
             # Decode
-            if self.lora_config is not None:
-                torch._dynamo.config.capture_dynamic_output_shape_ops = True
-            else:
-                torch._dynamo.mark_dynamic(token_ids, 0)
-                torch._dynamo.mark_dynamic(position_ids, 0)
-                torch._dynamo.mark_dynamic(input_lens, 0)
-                torch._dynamo.mark_dynamic(t, 0)
+            torch._dynamo.mark_dynamic(token_ids, 0)
+            torch._dynamo.mark_dynamic(position_ids, 0)
+            torch._dynamo.mark_dynamic(input_lens, 0)
+            torch._dynamo.mark_dynamic(t, 0)
             torch._dynamo.mark_dynamic(attn_metadata.slot_mapping, 0)
             torch._dynamo.mark_dynamic(attn_metadata.context_lens, 0)
             torch._dynamo.mark_dynamic(attn_metadata.block_tables, 0)
