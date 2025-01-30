@@ -663,12 +663,12 @@ class PrometheusStatLogger(StatLoggerBase):
         num_requests_with_evictions = len(
             [x for x in stats.request_with_evicted_tokens_requests
              if x]) if stats.request_with_evicted_tokens_requests else 0
-        self._log_counter(self.metrics.counter_requests_with_evicted_tokens, 
+        self._log_counter(self.metrics.counter_requests_with_evicted_tokens,
                           num_requests_with_evictions)
 
         total_evicted = sum(stats.total_evicted_tokens_requests
                             ) if stats.total_evicted_tokens_requests else 0
-        self._log_counter(self.metrics.counter_total_evicted_tokens, 
+        self._log_counter(self.metrics.counter_total_evicted_tokens,
                           total_evicted)
 
         # Metadata

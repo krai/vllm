@@ -281,11 +281,11 @@ class DefaultModelLoader(BaseModelLoader):
                     break
 
             if use_safetensors:
-            # For models like Mistral-7B-Instruct-v0.3
-            # there are both sharded safetensors files and a consolidated
-            # safetensors file. Using both breaks.
-            # Here, we download the `model.safetensors.index.json` and filter
-            # any files not found in the index.
+                # For models like Mistral-7B-Instruct-v0.3
+                # there are both sharded safetensors files and a consolidated
+                # safetensors file. Using both breaks.
+                # Here, we download the `model.safetensors.index.json` and filter
+                # any files not found in the index.
                 if not is_local:
                     hf_folder = download_weights_from_hf(
                         model_name_or_path,
@@ -299,18 +299,19 @@ class DefaultModelLoader(BaseModelLoader):
 
                 hf_weights_files: List[str] = []
                 for pattern in allow_patterns:
-                    hf_weights_files += glob.glob(os.path.join(hf_folder, pattern))
+                    hf_weights_files += glob.glob(
+                        os.path.join(hf_folder, pattern))
                     if len(hf_weights_files) > 0:
                         if pattern == "*.safetensors":
                             use_safetensors = True
                         break
 
                 if use_safetensors:
-                # For models like Mistral-7B-Instruct-v0.3
-                # there are both sharded safetensors files and a consolidated
-                # safetensors file. Using both breaks.
-                # Here, we download the `model.safetensors.index.json` and filter
-                # any files not found in the index.
+                    # For models like Mistral-7B-Instruct-v0.3
+                    # there are both sharded safetensors files and a consolidated
+                    # safetensors file. Using both breaks.
+                    # Here, we download the `model.safetensors.index.json` and filter
+                    # any files not found in the index.
                     if not is_local:
                         download_safetensors_index_file_from_hf(
                             model_name_or_path,
@@ -331,7 +332,8 @@ class DefaultModelLoader(BaseModelLoader):
                 return hf_folder, hf_weights_files, use_safetensors
         finally:
             self.model_disk_load_time = time.time() - disk_load_start
-            logger.info(f"Model disk load time: {self.model_disk_load_time:.2f}s")
+            logger.info(
+                f"Model disk load time: {self.model_disk_load_time:.2f}s")
 
     def _get_weights_iterator(
             self, source: "Source"
@@ -413,7 +415,10 @@ class DefaultModelLoader(BaseModelLoader):
                 with target_device:
                     model = _initialize_model(vllm_config=vllm_config)
 
-                weights_to_load = {name for name, _ in model.named_parameters()}
+                weights_to_load = {
+                    name
+                    for name, _ in model.named_parameters()
+                }
                 loaded_weights = model.load_weights(
                     self._get_all_weights(model_config, model))
                 # We only enable strict check for non-quantized models
@@ -437,18 +442,23 @@ class DefaultModelLoader(BaseModelLoader):
                             quant_method.process_weights_after_loading(module)
 
             model_load_time = time.time() - start_time
-            logger.info("Loading model weights took %.4f seconds", model_load_time)
+            logger.info("Loading model weights took %.4f seconds",
+                        model_load_time)
             
             # Store both disk and GPU load times on the model for metrics collection
             model.model_load_time = {
-                'disk_load_time': self.model_disk_load_time,
-                'gpu_load_time': time.time() - gpu_load_start,
-                'total_load_time': self.model_disk_load_time + (time.time() - gpu_load_start)
+                'disk_load_time':
+                self.model_disk_load_time,
+                'gpu_load_time':
+                time.time() - gpu_load_start,
+                'total_load_time':
+                self.model_disk_load_time + (time.time() - gpu_load_start)
             }
             
             return model.eval()
         finally:
-            logger.info(f"Model GPU load time: {(time.time() - gpu_load_start):.2f}s")
+            logger.info(
+                f"Model GPU load time: {(time.time() - gpu_load_start):.2f}s")
 
 class DummyModelLoader(BaseModelLoader):
     """Model loader that will set model weights to random values."""
@@ -823,7 +833,8 @@ class BitsAndBytesModelLoader(BaseModelLoader):
 
         if len(hf_weights_files) == 0:
             raise RuntimeError(
-                f"Cannot find any model weights with `{model_name_or_path}`")
+                f"Cannot find any model weights with `{model_name_or_path}`"
+            )
 
         return hf_weights_files, matched_pattern == "*.safetensors"
 

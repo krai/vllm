@@ -1,9 +1,9 @@
-from itertools import count
 import subprocess
 import sys
 import tempfile
 import time
 from http import HTTPStatus
+from itertools import count
 
 import openai
 import pytest
@@ -91,39 +91,30 @@ EXPECTED_VALUES = {
     [("_sum", _NUM_REQUESTS * _NUM_GENERATION_TOKENS_PER_REQUEST),
      ("_count", _NUM_REQUESTS)],
     "vllm:request_params_n": [("_count", _NUM_REQUESTS)],
-    "vllm:request_params_max_tokens":
-    [("_sum", _NUM_REQUESTS * _NUM_GENERATION_TOKENS_PER_REQUEST),
+    "vllm:request_params_max_tokens": [
+    ("_sum", _NUM_REQUESTS * _NUM_GENERATION_TOKENS_PER_REQUEST),
      ("_count", _NUM_REQUESTS)],
     "vllm:prompt_tokens": [("_total",
                             _NUM_REQUESTS * _NUM_PROMPT_TOKENS_PER_REQUEST)],
     "vllm:generation_tokens": [
         ("_total", _NUM_REQUESTS * _NUM_PROMPT_TOKENS_PER_REQUEST)
     ],
-    "vllm:model_load_time_seconds": [
-        ("_sum", 0.0),
-        ("_count", 1)
-    ],
-    "vllm:max_token_capacity_tokens": [
-        ("_sum", _NUM_REQUESTS * (_NUM_PROMPT_TOKENS_PER_REQUEST + _NUM_GENERATION_TOKENS_PER_REQUEST)),
-        ("_count", _NUM_REQUESTS)
-    ],
-    "vllm:time_per_prefill_token_requests_milliseconds": [
-        ("_count", _NUM_REQUESTS)
-    ],
+    "vllm:model_load_time_seconds": [("_sum", 0.0),("_count", 1)],
+    "vllm:max_token_capacity_tokens": 
+    [("_sum", _NUM_REQUESTS *
+      (_NUM_PROMPT_TOKENS_PER_REQUEST + _NUM_GENERATION_TOKENS_PER_REQUEST)),
+        ("_count", _NUM_REQUESTS)],
+    "vllm:time_per_prefill_token_requests_milliseconds": [("_count",
+                                                            _NUM_REQUESTS)],
     "vllm:total_tokens_in_current_batch": [
         ("_sum", _NUM_REQUESTS * _NUM_PROMPT_TOKENS_PER_REQUEST),
         ("_count", _NUM_REQUESTS)
     ],
     "vllm:total_tokens_in_queue_requests": [
-        ("_sum", _NUM_REQUESTS * _NUM_PROMPT_TOKENS_PER_REQUEST),
-        ("_count", 1)
+        ("_sum", _NUM_REQUESTS * _NUM_PROMPT_TOKENS_PER_REQUEST),("_count", 1)
     ],
-    "vllm:requests_with_evicted_tokens_total": [
-        ("_total", 0)  
-    ],
-    "vllm:total_evicted_tokens_total": [
-        ("_total", 0)
-    ],
+    "vllm:requests_with_evicted_tokens_total": [("_total", 0)],
+    "vllm:total_evicted_tokens_total": [("_total", 0)],
     "vllm:request_success": [("_total", _NUM_REQUESTS)],
 }
 

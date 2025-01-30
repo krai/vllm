@@ -1625,7 +1625,7 @@ class LLMEngine:
         max_token_capacity_requests: List[int] = []
         total_tokens_in_current_batch_requests: List[int] = []
         total_tokens_in_queue_requests: List[int] = []
-        request_with_evicted_tokens_requests: List[bool] = []  
+        request_with_evicted_tokens_requests: List[bool] = []
         total_evicted_tokens_requests: List[int] = []
         finished_reason_requests: List[str] = []
 
@@ -1687,7 +1687,7 @@ class LLMEngine:
                     total_tokens_in_current_batch += scheduled_seq_group.token_chunk_size
                 else:
                     total_tokens_in_current_batch += (
-                        1 if seq_group.state.current_step == 0 else 
+                        1 if seq_group.state.current_step == 0 else
                         seq_group.state.current_step)
 
                 # Calculate total tokens in queue
@@ -1751,7 +1751,7 @@ class LLMEngine:
                             now - seq_group.metrics.first_scheduled_time)
                         time_per_prefill_token_requests.append(
                             (seq_group.metrics.first_token_time -
-                            seq_group.metrics.first_scheduled_time) /
+                             seq_group.metrics.first_scheduled_time) /
                             seq_group.num_seqs())
                     if seq_group.metrics.time_in_queue is not None:
                         time_in_queue_requests.append(
@@ -1783,7 +1783,7 @@ class LLMEngine:
                             seq_group.sampling_params.max_tokens)
                         # Update max token capacity as prompt tokens + max generation tokens
                         max_token_capacity = len(
-                            seq_group.prompt_token_ids) + max_tokens
+                            seq_group.prompt_token_ids) + seq_group.sampling_params.max_tokens
                         seq_group.metrics.max_token_capacity = max_token_capacity
                         max_token_capacity_requests.append(max_token_capacity)
                     finished_reason_requests.extend([
@@ -1793,13 +1793,13 @@ class LLMEngine:
                     total_tokens_in_queue_requests.append(
                         total_tokens_in_queue)
                     # Track if this request had any token evictions
-                    had_evicted_tokens = any(seq.get_num_evicted_tokens() > 0 
+                    had_evicted_tokens = any(seq.get_num_evicted_tokens() > 0
                                              for seq in seq_group.get_seqs())
                     request_with_evicted_tokens_requests.append(
                         had_evicted_tokens)
                     
                     # Track total number of evicted tokens
-                    total_evicted = sum(seq.get_num_evicted_tokens() 
+                    total_evicted = sum(seq.get_num_evicted_tokens()
                                         for seq in seq_group.get_seqs())
                     total_evicted_tokens_requests.append(total_evicted)
 
@@ -1826,8 +1826,8 @@ class LLMEngine:
         if hasattr(self.model_executor, 'model_loader'):
             model_disk_load_time = getattr(self.model_executor.model_loader,
                                            'model_disk_load_time', 0.0)
-            model_gpu_load_time = getattr(self.model_executor.model_loader, 
-                                           'model_gpu_load_time', 0.0)
+            model_gpu_load_time = getattr(self.model_executor.model_loader,
+                                          'model_gpu_load_time', 0.0)
             total_load_time = model_disk_load_time + model_gpu_load_time
             model_load_time_requests.append(total_load_time)
 
