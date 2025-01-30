@@ -648,17 +648,15 @@ class PrometheusStatLogger(StatLoggerBase):
                               ) if stats.model_load_time_requests else 0
         self._log_gauge(self.metrics.gauge_model_load_time_request,
                         model_load_time)
-
-        # Total tokens metrics
+        # Total tokens metrics in current batch
         if stats.total_tokens_in_current_batch_requests:
             self._log_gauge(
                 self.metrics.gauge_total_tokens_in_current_batch_request,
                 sum(stats.total_tokens_in_current_batch_requests))
-        
+        # Total tokens metrics in queue
         if stats.total_tokens_in_queue_requests:
             self._log_gauge(self.metrics.gauge_total_tokens_in_queue_request,
                             sum(stats.total_tokens_in_queue_requests))
-        
         # Token eviction metrics
         num_requests_with_evictions = len(
             [x for x in stats.request_with_evicted_tokens_requests

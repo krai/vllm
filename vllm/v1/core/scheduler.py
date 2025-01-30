@@ -147,10 +147,9 @@ class Scheduler:
 
                     # Track token evictions before freeing
                     if preempted_req.num_computed_tokens > 0:
-                        for seq in preempted_req.get_seqs():
-                            seq.increment_evicted_tokens(
-                                seq.get_num_computed_tokens())
-                            
+                        preempted_req.increment_evicted_tokens(
+                            preempted_req.num_computed_tokens)
+
                     self.kv_cache_manager.free(preempted_req)
                     preempted_req.status = RequestStatus.PREEMPTED
                     preempted_req.num_computed_tokens = 0

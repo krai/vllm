@@ -1653,7 +1653,7 @@ class LLMEngine:
         if scheduler_outputs is not None:
             # Track total tokens in current batch
             total_tokens_in_current_batch = 0
-            
+
             # For async postprocessor, already finished sequences need to be
             # not counted (to avoid double counting)
             actual_num_batched_tokens = scheduler_outputs.num_batched_tokens  # type: ignore
@@ -1684,7 +1684,8 @@ class LLMEngine:
                 # with group_was_prefill = True
                 # Add token counting for current batch
                 if group_was_prefill:
-                    total_tokens_in_current_batch += scheduled_seq_group.token_chunk_size
+                    total_tokens_in_current_batch +=\
+                        scheduled_seq_group.token_chunk_size
                 else:
                     total_tokens_in_current_batch += (
                         1 if seq_group.state.current_step == 0 else
@@ -1699,7 +1700,8 @@ class LLMEngine:
                         total_tokens_in_queue += prompt_length
                         # Add expected generation tokens
                         if waiting_seq_group.sampling_params:
-                            total_tokens_in_queue += waiting_seq_group.sampling_params.max_tokens
+                            total_tokens_in_queue +=\
+                                waiting_seq_group.sampling_params.max_tokens
 
                 # Number of prompt tokens.
                 num_prompt_tokens_iter += (
@@ -1781,11 +1783,14 @@ class LLMEngine:
                         n_requests.append(seq_group.sampling_params.n)
                         max_tokens_requests.append(
                             seq_group.sampling_params.max_tokens)
-                        # Update max token capacity as prompt tokens + max generation tokens
+                        # Update max token capacity as prompt tokens +
+                        # max generation tokens
                         max_token_capacity = len(
-                            seq_group.prompt_token_ids) + seq_group.sampling_params.max_tokens
-                        seq_group.metrics.max_token_capacity = max_token_capacity
-                        max_token_capacity_requests.append(max_token_capacity)
+                            seq_group.prompt_token_ids
+                        ) + seq_group.sampling_params.max_tokens
+                        seq_group.metrics.max_token_capacity = (
+                            max_token_capacity)
+                    max_token_capacity_requests.append(max_token_capacity)
                     finished_reason_requests.extend([
                         SequenceStatus.get_finished_reason(seq.status)
                         for seq in seq_group.get_finished_seqs()
@@ -1797,7 +1802,7 @@ class LLMEngine:
                                              for seq in seq_group.get_seqs())
                     request_with_evicted_tokens_requests.append(
                         had_evicted_tokens)
-                    
+
                     # Track total number of evicted tokens
                     total_evicted = sum(seq.get_num_evicted_tokens()
                                         for seq in seq_group.get_seqs())

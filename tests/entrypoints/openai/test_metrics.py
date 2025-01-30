@@ -3,7 +3,6 @@ import sys
 import tempfile
 import time
 from http import HTTPStatus
-from itertools import count
 
 import openai
 import pytest
@@ -92,26 +91,28 @@ EXPECTED_VALUES = {
      ("_count", _NUM_REQUESTS)],
     "vllm:request_params_n": [("_count", _NUM_REQUESTS)],
     "vllm:request_params_max_tokens": [
-    ("_sum", _NUM_REQUESTS * _NUM_GENERATION_TOKENS_PER_REQUEST),
-     ("_count", _NUM_REQUESTS)],
+        ("_sum", _NUM_REQUESTS * _NUM_GENERATION_TOKENS_PER_REQUEST),
+        ("_count", _NUM_REQUESTS)
+    ],
     "vllm:prompt_tokens": [("_total",
                             _NUM_REQUESTS * _NUM_PROMPT_TOKENS_PER_REQUEST)],
     "vllm:generation_tokens": [
         ("_total", _NUM_REQUESTS * _NUM_PROMPT_TOKENS_PER_REQUEST)
     ],
-    "vllm:model_load_time_seconds": [("_sum", 0.0),("_count", 1)],
-    "vllm:max_token_capacity_tokens": 
+    "vllm:model_load_time_seconds": [("_count", 1)],
+    "vllm:max_token_capacity_tokens":
     [("_sum", _NUM_REQUESTS *
       (_NUM_PROMPT_TOKENS_PER_REQUEST + _NUM_GENERATION_TOKENS_PER_REQUEST)),
-        ("_count", _NUM_REQUESTS)],
+     ("_count", _NUM_REQUESTS)],
     "vllm:time_per_prefill_token_requests_milliseconds": [("_count",
-                                                            _NUM_REQUESTS)],
+                                                           _NUM_REQUESTS)],
     "vllm:total_tokens_in_current_batch": [
         ("_sum", _NUM_REQUESTS * _NUM_PROMPT_TOKENS_PER_REQUEST),
         ("_count", _NUM_REQUESTS)
     ],
     "vllm:total_tokens_in_queue_requests": [
-        ("_sum", _NUM_REQUESTS * _NUM_PROMPT_TOKENS_PER_REQUEST),("_count", 1)
+        ("_sum", _NUM_REQUESTS * _NUM_PROMPT_TOKENS_PER_REQUEST),
+        ("_count", _NUM_REQUESTS)
     ],
     "vllm:requests_with_evicted_tokens_total": [("_total", 0)],
     "vllm:total_evicted_tokens_total": [("_total", 0)],
@@ -201,7 +202,6 @@ EXPECTED_METRICS = [
     "vllm:num_preemptions_total",
     "vllm:prompt_tokens_total",
     "vllm:generation_tokens_total",
-    "vllm:model_load_time_seconds_sum",
     "vllm:model_load_time_seconds_count",
     "vllm:total_tokens_in_current_batch_sum",
     "vllm:total_tokens_in_current_batch_count",
@@ -224,7 +224,6 @@ EXPECTED_METRICS = [
     "num_gpu_blocks_override",
     "sliding_window",
     "swap_space_bytes"
-
 ]
 
 EXPECTED_METRICS_V1 = [

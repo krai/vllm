@@ -111,6 +111,8 @@ class RequestMetrics:
                            will include model forward, block/sync across
                            workers, cpu-gpu sync time and sampling time.
         time_per_prefill_token: The time spent in the prefill stage.
+        num_evicted_tokens: The number of tokens that were evicted 
+                           from KV cache.
     """
     arrival_time: float
     last_token_time: float
@@ -122,6 +124,7 @@ class RequestMetrics:
     model_forward_time: Optional[float] = None
     model_execute_time: Optional[float] = None
     time_per_prefill_token: Optional[float] = None
+    num_evicted_tokens: int = 0
 
 
 class SequenceDataDelta(
@@ -424,9 +427,6 @@ class Sequence:
 
         self.status = SequenceStatus.WAITING
         self.stop_reason: Union[int, str, None] = None
-        
-        # Track number of evicted tokens from KV cache
-        self._num_evicted_tokens = 0
 
         # These are used to keep track of delta outputs
         self._last_output_token_ids_offset: int = 0
@@ -459,7 +459,7 @@ class Sequence:
         return self.inputs.token_type_ids
 
     @property
-    def multi_modal_data(self) -> "MultiModalDataDict":
+    def multi_modal_data(self) -> MultiModalDataDict:
         return self.inputs.multi_modal_data
 
     @property
@@ -611,18 +611,6 @@ class Sequence:
         return (f"Sequence(seq_id={self.seq_id}, "
                 f"status={self.status.name}, "
                 f"num_blocks={self.n_blocks}, ")
-
-    def get_num_evicted_tokens(self) -> int:
-        """Returns the number of tokens that were evicted from KV cache."""
-        return self._num_evicted_tokens
-
-    def increment_evicted_tokens(self, num_tokens: int = 1) -> None:
-        """Increments the count of evicted tokens.
-        
-        Args:
-            num_tokens: Number of tokens that were evicted from KV cache.
-        """
-        self._num_evicted_tokens += num_tokens
 
 
 class SequenceGroupState(msgspec.Struct,
