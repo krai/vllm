@@ -223,7 +223,7 @@ EXPECTED_METRICS = [
     "num_gpu_blocks",
     "num_gpu_blocks_override",
     "sliding_window",
-    "swap_space_bytes"
+    "swap_space_bytes",
 ]
 
 EXPECTED_METRICS_V1 = [
