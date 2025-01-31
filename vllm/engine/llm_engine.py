@@ -1684,38 +1684,26 @@ class LLMEngine:
                 # with group_was_prefill = True
                 # Add token counting for current batch
                 if group_was_prefill:
-                    total_tokens_in_current_batch +=\
-                        scheduled_seq_group.token_chunk_size
-                else:
-                    total_tokens_in_current_batch += (
-                        1 if seq_group.state.current_step == 0 else
-                        seq_group.state.current_step)
+                    # Number of prompt tokens.
+                    num_prompt_tokens_iter += (
+                        scheduled_seq_group.token_chunk_size)
 
-                # Calculate total tokens in queue
-                total_tokens_in_queue = 0
-                for scheduler in self.scheduler:
-                    for waiting_seq_group in scheduler.waiting:
-                        # Add prompt tokens
-                        prompt_length = len(waiting_seq_group.prompt_token_ids)
-                        total_tokens_in_queue += prompt_length
-                        # Add expected generation tokens
-                        if waiting_seq_group.sampling_params:
-                            total_tokens_in_queue +=\
-                                waiting_seq_group.sampling_params.max_tokens
-
-                # Number of prompt tokens.
-                num_prompt_tokens_iter += (
-                    scheduled_seq_group.token_chunk_size)
-
-                # If the seq_group just finished the prefill state
-                # get TTFT.
-                if not seq_group.is_prefill():
-                    latency = seq_group.get_last_token_latency()
-                    time_to_first_tokens_iter.append(latency)
+                    # If the seq_group just finished the prefill state
+                    # get TTFT.
+                    if not seq_group.is_prefill():
+                        latency = seq_group.get_last_token_latency()
+                        time_to_first_tokens_iter.append(latency)
 
                     # One generation token per finished prefill.
                     num_generation_tokens_from_prefill_groups += (
                         seq_group.num_seqs())
+
+                    total_tokens_in_current_batch +=\
+                        scheduled_seq_group.token_chunk_size
+
+                    total_tokens_in_current_batch += (
+                        1 if seq_group.state.current_step == 0 else
+                        seq_group.state.current_step)
                 else:
                     # TPOTs.
                     latency = seq_group.get_last_token_latency()
@@ -1729,6 +1717,18 @@ class LLMEngine:
                     else:
                         actual_num_batched_tokens +=\
                             seq_group.state.current_step - 1
+
+                # Calculate total tokens in queue
+                total_tokens_in_queue = 0
+                for scheduler in self.scheduler:
+                    for waiting_seq_group in scheduler.waiting:
+                        # Add prompt tokens
+                        prompt_length = len(waiting_seq_group.prompt_token_ids)
+                        total_tokens_in_queue += prompt_length
+                        # Add expected generation tokens
+                        if waiting_seq_group.sampling_params:
+                            total_tokens_in_queue +=\
+                                waiting_seq_group.sampling_params.max_tokens
 
                 # Because of chunked prefill, we can have a single sequence
                 # group that does multiple prompt_runs. To prevent logging
