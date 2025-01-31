@@ -1798,14 +1798,19 @@ class LLMEngine:
                     total_tokens_in_queue_requests.append(
                         total_tokens_in_queue)
                     # Track if this request had any token evictions
-                    had_evicted_tokens = any(seq.get_num_evicted_tokens() > 0
-                                             for seq in seq_group.get_seqs())
+                    if self.device_config.device_type == "cuda":
+                        had_evicted_tokens = any(
+                            seq.metrics.num_evicted_tokens > 0
+                            for seq in seq_group.get_seqs())
+                        total_evicted = sum(seq.metrics.num_evicted_tokens
+                                            for seq in seq_group.get_seqs())
+                    else:
+                        # For CPU mode, no token evictions
+                        had_evicted_tokens = False
+                        total_evicted = 0
+
                     request_with_evicted_tokens_requests.append(
                         had_evicted_tokens)
-
-                    # Track total number of evicted tokens
-                    total_evicted = sum(seq.get_num_evicted_tokens()
-                                        for seq in seq_group.get_seqs())
                     total_evicted_tokens_requests.append(total_evicted)
 
             # Number of generation tokens.
