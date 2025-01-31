@@ -1833,7 +1833,7 @@ class LLMEngine:
         else:
             spec_decode_metrics = None
 
-        # Time to load a Model
+        # Time to load a model
         if hasattr(self.model_executor, 'model_loader'):
             model_disk_load_time = getattr(self.model_executor.model_loader,
                                            'model_disk_load_time', 0.0)
