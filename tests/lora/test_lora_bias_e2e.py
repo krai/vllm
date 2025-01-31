@@ -4,9 +4,9 @@ import pytest
 
 import vllm
 from vllm.lora.request import LoRARequest
+from vllm.platforms import current_platform
 
-MODEL_PATH = "ibm-granite/granite-3b-code-base"
-
+MODEL_PATH = "meta-llama/Llama-3.2-3B-Instruct" if current_platform.is_tpu() else "ibm-granite/granite-3b-code-base"
 
 def do_sample(llm: vllm.LLM, lora_path: str, lora_id: int) -> List[str]:
     prompts = [
@@ -31,10 +31,13 @@ def do_sample(llm: vllm.LLM, lora_path: str, lora_id: int) -> List[str]:
 @pytest.mark.parametrize("lora_bias", [True])
 @pytest.mark.parametrize("fully_sharded", [True, False])
 def test_lora_bias(lora_bias_files: str, lora_bias: bool, fully_sharded: bool):
+    max_model_len = 512 if current_platform.is_tpu() else None # TPUs don't have enough memory to fit the entire model in memory
+    
     llm = vllm.LLM(MODEL_PATH,
                    enable_lora=True,
                    max_num_seqs=16,
                    max_lora_rank=8,
+                   max_model_len=max_model_len,
                    max_loras=1,
                    enable_lora_bias=lora_bias,
                    tensor_parallel_size=1,
