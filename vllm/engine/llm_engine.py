@@ -1699,9 +1699,6 @@ class LLMEngine:
                     total_tokens_in_current_batch +=\
                         scheduled_seq_group.token_chunk_size
 
-                    total_tokens_in_current_batch += (
-                        1 if seq_group.state.current_step == 0 else
-                        seq_group.state.current_step)
                 else:
                     # TPOTs.
                     latency = seq_group.get_last_token_latency()
