@@ -1688,15 +1688,13 @@ class LLMEngine:
                     num_prompt_tokens_iter += (
                         scheduled_seq_group.token_chunk_size)
 
-                    # If the seq_group just finished the prefill state
-                    # get TTFT.
                     if not seq_group.is_prefill():
                         latency = seq_group.get_last_token_latency()
                         time_to_first_tokens_iter.append(latency)
 
-                    # One generation token per finished prefill.
-                    num_generation_tokens_from_prefill_groups += (
-                        seq_group.num_seqs())
+                        # One generation token per finished prefill.
+                        num_generation_tokens_from_prefill_groups += (
+                            seq_group.num_seqs())
 
                     total_tokens_in_current_batch +=\
                         scheduled_seq_group.token_chunk_size
@@ -1717,6 +1715,10 @@ class LLMEngine:
                     else:
                         actual_num_batched_tokens +=\
                             seq_group.state.current_step - 1
+
+                    total_tokens_in_current_batch += (
+                        1 if seq_group.state.current_step == 0 else
+                        seq_group.state.current_step)
 
                 # Calculate total tokens in queue
                 total_tokens_in_queue = 0
