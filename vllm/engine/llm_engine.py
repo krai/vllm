@@ -1688,6 +1688,8 @@ class LLMEngine:
                     num_prompt_tokens_iter += (
                         scheduled_seq_group.token_chunk_size)
 
+                    # If the seq_group just finished the prefill state
+                    # get TTFT.
                     if not seq_group.is_prefill():
                         latency = seq_group.get_last_token_latency()
                         time_to_first_tokens_iter.append(latency)
