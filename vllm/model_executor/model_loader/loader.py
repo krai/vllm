@@ -24,6 +24,7 @@ from torch import nn
 from transformers import AutoModelForCausalLM
 from transformers.utils import SAFE_WEIGHTS_INDEX_NAME
 
+from vllm.attention import Attention
 from vllm.config import (LoadConfig, LoadFormat, ModelConfig, ParallelConfig,
                          VllmConfig, set_current_vllm_config)
 from vllm.distributed import (get_tensor_model_parallel_rank,
@@ -403,18 +404,22 @@ class DefaultModelLoader(BaseModelLoader):
                             "Following weights were not initialized from "
                             f"checkpoint: {weights_not_loaded}")
 
+
                 for _, module in model.named_modules():
                     quant_method = getattr(module, "quant_method", None)
                     if isinstance(quant_method, QuantizeMethodBase):
-                        # When quant methods need to process weights after
-                        # loading for repacking, quantizing, etc), they
-                        # expect parameters to be on the global target
-                        # device. This scope is for the case where cpu
-                        # offloading is used, where we will move the
-                        # parameters onto device for processing and back
-                        # off after.
+                        # When quant methods need to process weights after loading
+                        # (for repacking, quantizing, etc), they expect parameters
+                        # to be on the global target device. This scope is for the
+                        # case where cpu offloading is used, where we will move the
+                        # parameters onto device for processing and back off after.
                         with device_loading_context(module, target_device):
                             quant_method.process_weights_after_loading(module)
+                    elif isinstance(module, Attention) and \
+                        hasattr(module, "process_weights_after_loading"):
+                        # When attention modules need to process weights after
+                        # currently only used by MLA
+                        module.process_weights_after_loading()
 
             self.model_gpu_load_time = time.time() - gpu_load_start
 
