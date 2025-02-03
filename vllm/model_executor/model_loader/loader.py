@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+
 # ruff: noqa: SIM117
 import collections
 import copy
@@ -303,11 +305,11 @@ class DefaultModelLoader(BaseModelLoader):
                     f"Cannot find any model weights with `{model_name_or_path}`"
                 )
 
-            return hf_folder, hf_weights_files, use_safetensors
         finally:
             self.model_disk_load_time = time.time() - disk_load_start
             logger.info("Model disk load time: %.2fs",
                         self.model_disk_load_time)
+        return hf_folder, hf_weights_files, use_safetensors
 
     def _get_weights_iterator(
             self, source: "Source"
@@ -410,22 +412,25 @@ class DefaultModelLoader(BaseModelLoader):
                         # When quant methods need to process weights after
                         # loading (for repacking, quantizing, etc), they
                         # expect parameters to be on the global target device.
-                        #  This scope is for the case where cpu offloading is
+                        # This scope is for the case where cpu offloading is
                         # used, where we will move the parameters onto device
                         # for processing and back off after.
                         with device_loading_context(module, target_device):
                             quant_method.process_weights_after_loading(module)
-                    elif isinstance(module, Attention) and \
+                    if isinstance(module, Attention) and \
                         hasattr(module, "process_weights_after_loading"):
                         # When attention modules need to process weights after
                         # currently only used by MLA
-                        module.process_weights_after_loading()
+                        # TODO(lucas): see if there is a way to unify the signatures
+                        # of process_weights_after_loading
+                        module.process_weights_after_loading(
+                                model_config.dtype)
 
             self.model_gpu_load_time = time.time() - gpu_load_start
 
-            return model.eval()
         finally:
             logger.info("Model GPU load time: %.2fs", self.model_gpu_load_time)
+        return model.eval()
 
 
 class DummyModelLoader(BaseModelLoader):
@@ -461,6 +466,11 @@ class DummyModelLoader(BaseModelLoader):
                     with device_loading_context(
                             module, torch.device(device_config.device)):
                         quant_method.process_weights_after_loading(module)
+                if isinstance(module, Attention) and \
+                    hasattr(module, "process_weights_after_loading"):
+                    # When attention modules need to process weights after
+                    # currently only used by MLA
+                    module.process_weights_after_loading(model_config.dtype)
         return model.eval()
 
 
@@ -655,6 +665,12 @@ class ShardedStateLoader(BaseModelLoader):
                     quant_method = getattr(module, "quant_method", None)
                     if quant_method is not None:
                         quant_method.process_weights_after_loading(module)
+                    if isinstance(module, Attention) and \
+                        hasattr(module, "process_weights_after_loading"):
+                        # When attention modules need to process weights after
+                        # currently only used by MLA
+                        module.process_weights_after_loading(
+                            model_config.dtype)
             rank = get_tensor_model_parallel_rank()
             pattern = os.path.join(
                 local_model_path,
@@ -1294,7 +1310,7 @@ class GGUFModelLoader(BaseModelLoader):
 
 class RunaiModelStreamerLoader(BaseModelLoader):
     """
-        Model loader that can load safetensors 
+        Model loader that can load safetensors
         files from local FS or S3 bucket.
     """
 
@@ -1391,6 +1407,11 @@ class RunaiModelStreamerLoader(BaseModelLoader):
                 if quant_method is not None:
                     with device_loading_context(module, target_device):
                         quant_method.process_weights_after_loading(module)
+                if isinstance(module, Attention) and \
+                    hasattr(module, "process_weights_after_loading"):
+                    # When attention modules need to process weights after
+                    # currently only used by MLA
+                    module.process_weights_after_loading(model_config.dtype)
         return model.eval()
 
 
