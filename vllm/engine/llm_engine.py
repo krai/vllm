@@ -1839,9 +1839,9 @@ class LLMEngine:
         if hasattr(self.model_executor, 'model_loader'):
             model_disk_load_time = getattr(self.model_executor.model_loader,
                                            'model_disk_load_time', 0.0)
-            model_gpu_load_time = getattr(self.model_executor.model_loader,
-                                          'model_gpu_load_time', 0.0)
-            total_load_time = model_disk_load_time + model_gpu_load_time
+            model_device_load_time = getattr(self.model_executor.model_loader,
+                                             'model_device_load_time', 0.0)
+            total_load_time = model_disk_load_time + model_device_load_time
             model_load_time_requests.append(total_load_time)
 
         return Stats(

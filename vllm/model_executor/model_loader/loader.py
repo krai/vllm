@@ -191,6 +191,8 @@ class DefaultModelLoader(BaseModelLoader):
 
     def __init__(self, load_config: LoadConfig):
         super().__init__(load_config)
+        self.model_disk_load_time = 0.0
+        self.model_device_load_time = 0.0
         if load_config.model_loader_extra_config:
             raise ValueError(f"Model loader extra config is not supported for "
                              f"load format {load_config.load_format}")
@@ -426,10 +428,10 @@ class DefaultModelLoader(BaseModelLoader):
                         module.process_weights_after_loading(
                             model_config.dtype)
 
-            self.model_gpu_load_time = time.time() - gpu_load_start
-
         finally:
-            logger.info("Model GPU load time: %.2fs", self.model_gpu_load_time)
+            self.model_device_load_time = time.time() - gpu_load_start
+            logger.info("Model device load time: %.2fs",
+                        self.model_device_load_time)
         return model.eval()
 
 

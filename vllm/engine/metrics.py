@@ -218,7 +218,7 @@ class Metrics:
         self.gauge_model_load_time_request = self._gauge_cls(
             name="vllm:model_load_time_seconds",
             documentation=
-            "Time spent in model loading in seconds (disk + GPU).",
+            "Time spent in model loading in seconds (disk + device).",
             labelnames=labelnames,
             multiprocess_mode="sum")
 
