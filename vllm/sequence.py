@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Sequence and its related classes."""
 import copy
 import enum
@@ -459,7 +460,7 @@ class Sequence:
         return self.inputs.token_type_ids
 
     @property
-    def multi_modal_data(self) -> MultiModalDataDict:
+    def multi_modal_data(self) -> "MultiModalDataDict":
         return self.inputs.multi_modal_data
 
     @property
