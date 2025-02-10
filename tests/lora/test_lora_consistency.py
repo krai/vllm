@@ -1,163 +1,133 @@
 import json
 import os
-import pickle
-import pytest
 import tempfile
 from typing import List, Dict
 
+import pytest
 import vllm
 from vllm.lora.request import LoRARequest
 from vllm.outputs import RequestOutput
-from vllm.utils import random_uuid
+from vllm.engine.arg_utils import EngineArgs
+from vllm.engine.llm_engine import LLMEngine
 from huggingface_hub import snapshot_download
 
-@pytest.fixture
-def sample_prompts() -> List[str]:
-    """Sample prompts for testing."""
-    return [
-        "Once upon a time",
-        "The quick brown fox",
-    ]
-
-@pytest.fixture
-def output_dir():
-    """Create temporary directory for test outputs."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        yield tmp_dir
-
-@pytest.fixture(scope="session")
-def test_lora_path():
-    return snapshot_download(repo_id="SangBinCho/mixtral-lora")
-
-@pytest.fixture(scope="session")
-def adapter_1():
-    """Get first LoRA adapter."""
-    return snapshot_download(repo_id="SangBinCho/mixtral-lora")
-
-@pytest.fixture(scope="session")
-def adapter_2():
-    """Get second LoRA adapter."""
-    return snapshot_download(repo_id="dyang415/mixtral-lora-v0")
-
+# Initialize LLM engine for Llama3.1-8B
 def get_llm(enable_lora: bool) -> vllm.LLM:
-    """Initialize LLM with or without LoRA."""
     return vllm.LLM(
-        model="facebook/opt-125m",  # Using tiny model for testing
-        download_dir=None,  # Use default cache dir
-        num_scheduler_steps=1,
-        swap_space=1,  # Reduced for testing
-        max_model_len=512,
+        model="meta-llama/Llama-3.1-8b",
+        device="cuda",  
         enable_lora=enable_lora,
+        max_model_len=4096,  
+        max_num_seqs=2,     
+        max_num_batched_tokens=4096,  
+        swap_space=32,
+        max_lora_rank=32
     )
 
 def format_output(outputs: List[RequestOutput], start_idx: int = 0) -> List[Dict]:
-    """Format outputs in consistent format."""
     return [
         {
             "qsl_idx": i + start_idx,
             "seq_id": i + start_idx,
-            "data": "".join(map(lambda x: x.to_bytes(4, byteorder="little").hex().upper(),
-                              output.outputs[0].token_ids))
+            "data": output.outputs[0].text
         }
         for i, output in enumerate(outputs)
     ]
 
-def save_outputs(outputs: List[Dict], output_dir: str, is_lora: bool):
-    """Save outputs to JSON file."""
-    fname_type = "lora" if is_lora else "normal"
-    fname_count = len([f for f in os.listdir(output_dir) if fname_type in f])
-    output_path = os.path.join(output_dir, f"{fname_type}_{fname_count}.json")
-    
-    with open(output_path, "w") as f:
-        json.dump(outputs, f, indent=4)
-    return output_path
+@pytest.fixture
+def sample_prompts():
+    return [
+        "Describe the theory of evolution.",
+        "Explain quantum mechanics in simple terms.",
+        "Write a short story about a time traveler.",
+        "What are the main principles of democracy?",
+    ]
 
-def create_lora_request(name: str, path: str, lora_id: int) -> LoRARequest:
-    """Create a LoRA request object."""
-    return LoRARequest(
-        lora_name=name,
-        lora_int_id=lora_id,
-        lora_path=path,
-    )
+@pytest.fixture
+def llama_adapters():
+    adapter_1 = snapshot_download(repo_id="pbevan11/llama-3.1-8b-ocr-correction")
+    adapter_2 = snapshot_download(repo_id="RikiyaT/Meta-Llama-3.1-8B-LoRA-test")
+    return [("adapter_llama_1", adapter_1, 1), ("adapter_llama_2", adapter_2, 2)]
 
-def test_lora_consistency(test_lora_path, sample_prompts, output_dir):
-    """Test consistency between LoRA and non-LoRA outputs."""
-    sampling_params = vllm.SamplingParams(
-        max_tokens=32,
-        temperature=0,
-    )
+@pytest.fixture
+def sampling_params():
+    return vllm.SamplingParams(max_tokens=64, temperature=0.7)
 
-    # Get outputs without LoRA
-    llm_normal = get_llm(enable_lora=False)
-    outputs_normal = llm_normal.generate(sample_prompts, sampling_params)
+@pytest.fixture
+def output_dir():
+    output_dir = "./outputs"
+    os.makedirs(output_dir, exist_ok=True)
+    return output_dir
 
-    # Get outputs with LoRA
-    llm_lora = get_llm(enable_lora=True)
+# Test: Add Adapter
+def test_add_llama_adapter(sample_prompts, llama_adapters, sampling_params, output_dir):
+    llm = get_llm(enable_lora=True)
+
+    # Add and generate with one adapter
+    adapter_name, adapter_path, adapter_id = llama_adapters[0]
+    print(f"\nAdding adapter: {adapter_name}")
+
     lora_request = LoRARequest(
-        lora_name="test_lora",
-        lora_int_id=1,
-        lora_path=test_lora_path,
+        lora_name=adapter_name,
+        lora_int_id=adapter_id,
+        lora_path=adapter_path,
     )
-    llm_lora.add_lora(lora_request)
-    outputs_lora = llm_lora.generate(sample_prompts, sampling_params)
+    llm.llm_engine.add_lora(lora_request)
+
+    outputs = llm.generate(sample_prompts, sampling_params)
+    formatted_outputs = format_output(outputs)
+    assert len(formatted_outputs) == len(sample_prompts), "Output generation failed for add_adapter"
 
     # Save outputs
-    normal_outputs = format_output(outputs_normal)
-    lora_outputs = format_output(outputs_lora)
+    output_file = os.path.join(output_dir, f"{adapter_name}_add_adapter_outputs.json")
+    with open(output_file, "w") as f:
+        json.dump(formatted_outputs, f, indent=2)
 
-    # Save outputs to files for comparison
-    normal_file = os.path.join(output_dir, "normal_outputs.json")
-    lora_file = os.path.join(output_dir, "lora_outputs.json")
-
-    with open(normal_file, "w") as f:
-        json.dump(normal_outputs, f, indent=2)
-    with open(lora_file, "w") as f:
-        json.dump(lora_outputs, f, indent=2)
-
-    # Verify outputs are different
-    for normal_item, lora_item in zip(normal_outputs, lora_outputs):
-        assert len(normal_item["data"]) > 0, "Normal output data should not be empty"
-        assert len(lora_item["data"]) > 0, "LoRA output data should not be empty"
-
-def test_lora_swap_consistency(adapter_1, adapter_2, sample_prompts, output_dir):
-    """Test consistency when swapping between different LoRA adapters."""
-    sampling_params = vllm.SamplingParams(
-        max_tokens=32,
-        temperature=0,
-    )
-    
-    # Initialize LLM with LoRA support
+# Test: Remove Adapter
+def test_remove_llama_adapter(sample_prompts, llama_adapters, sampling_params):
     llm = get_llm(enable_lora=True)
-    
-    # Test different adapters
-    adapter_configs = [
-        ("adapter_1", adapter_1, 1),
-        ("adapter_2", adapter_2, 2),
-    ]
-    
-    results = []
-    for adapter_name, adapter_path, adapter_id in adapter_configs:
-        # Add current adapter
-        lora_request = LoRARequest(
-            lora_name=adapter_name,
-            lora_int_id=adapter_id,
-            lora_path=adapter_path,
-        )
-        llm.add_lora(lora_request)
-        
-        # Generate with current adapter
-        outputs = llm.generate(sample_prompts, sampling_params)
-        formatted_outputs = format_output(outputs, start_idx=adapter_id * len(sample_prompts))
-        results.extend(formatted_outputs)
-        
-        # Save results
-        output_file = os.path.join(output_dir, f"{adapter_name}_outputs.json")
-        with open(output_file, "w") as f:
-            json.dump(formatted_outputs, f, indent=2)
-        
-        # Remove current adapter before adding next one
-        llm.remove_lora(adapter_id)
-    
-    # Verify all outputs are saved
-    assert len(results) == len(adapter_configs) * len(sample_prompts)
 
+    # Add an adapter
+    adapter_name, adapter_path, adapter_id = llama_adapters[0]
+    llm.llm_engine.add_lora(LoRARequest(lora_name=adapter_name, lora_int_id=adapter_id, lora_path=adapter_path))
+
+    # Remove the adapter
+    llm.llm_engine.remove_lora(adapter_id)
+
+    # Generate output 
+    outputs = llm.generate(sample_prompts, sampling_params)
+    assert len(outputs) == len(sample_prompts), "Output generation failed after removing adapter"
+
+# Test: Swap between Adapters
+def test_swap_llama_adapters(sample_prompts, llama_adapters, sampling_params, output_dir):
+    llm = get_llm(enable_lora=True)
+
+    # Add the first adapter
+    adapter_1_name, adapter_1_path, adapter_1_id = llama_adapters[0]
+    llm.llm_engine.add_lora(
+        LoRARequest(lora_name=adapter_1_name, lora_int_id=adapter_1_id, lora_path=adapter_1_path)
+    )
+
+    # Generate output with the first adapter
+    outputs_adapter_1 = llm.generate(sample_prompts, sampling_params)
+    formatted_outputs_1 = format_output(outputs_adapter_1)
+
+    # Simulate swap by removing the first adapter and adding the second adapter
+    llm.llm_engine.remove_lora(adapter_1_id)
+    
+    adapter_2_name, adapter_2_path, adapter_2_id = llama_adapters[1]
+    llm.llm_engine.add_lora(
+        LoRARequest(lora_name=adapter_2_name, lora_int_id=adapter_2_id, lora_path=adapter_2_path)
+    )
+
+    # Generate output with the second adapter
+    outputs_adapter_2 = llm.generate(sample_prompts, sampling_params)
+    formatted_outputs_2 = format_output(outputs_adapter_2)
+
+    with open(os.path.join(output_dir, "swap_adapter_1_outputs.json"), "w") as f:
+        json.dump(formatted_outputs_1, f, indent=2)
+    with open(os.path.join(output_dir, "swap_adapter_2_outputs.json"), "w") as f:
+        json.dump(formatted_outputs_2, f, indent=2)
+
+    # Ensure outputs from both adapters are different
+    assert formatted_outputs_1 != formatted_outputs_2, "Swapping adapters did not produce different outputs"
