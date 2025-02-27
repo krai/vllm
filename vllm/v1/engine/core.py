@@ -132,6 +132,7 @@ class EngineCore:
                     logger.info(("GPU model loading (loading model weights, "
                          "torch.compile, capturing graphs, init engine) "
                          "took %.2f seconds"), total_gpu_load_time)
+
         return num_gpu_blocks, num_cpu_blocks
 
     def add_request(self, request: EngineCoreRequest):
