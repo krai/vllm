@@ -232,6 +232,16 @@ class PrometheusStatLogger(StatLoggerBase):
                 "Histogram of time spent in DECODE phase for request.",
                 buckets=request_latency_buckets,
                 labelnames=labelnames).labels(*labelvalues)
+        max_token_capacity = min(
+            vllm_config.model_config.max_model_len *
+            vllm_config.scheduler_config.max_num_seqs,
+            vllm_config.scheduler_config.max_num_batched_tokens)
+        self.gauge_max_token_capacity_per_batch = prometheus_client.Gauge(
+            name="vllm:max_token_capacity_per_batch",
+            documentation=
+            "Maximum tokens processed by the model server at max batch size",
+            labelnames=labelnames).labels(*labelvalues)
+        self.gauge_max_token_capacity_per_batch.set(max_token_capacity)
 
         self.log_metrics_info("cache_config", vllm_config.cache_config)
 
