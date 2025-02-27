@@ -76,6 +76,7 @@ class IterationStats:
         self.time_per_output_tokens_iter: List[float] = []
         self.queue_times_iter: List[float] = []
         self.prefill_times_iter: List[float] = []
+        self.prefill_lens_iter: List[int] = []
 
     def _time_since(self, start: float) -> float:
         """Calculate an interval relative to this iteration's timestamp."""
@@ -114,6 +115,7 @@ class IterationStats:
                 prefill_interval = \
                     engine_core_timestamp - req_stats.scheduled_ts
                 self.prefill_times_iter.append(prefill_interval)
+                self.prefill_lens_iter.append(prompt_len)
                 req_stats.first_token_ts = engine_core_timestamp
         else:
             tpot = engine_core_timestamp - req_stats.last_token_ts

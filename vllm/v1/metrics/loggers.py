@@ -194,6 +194,16 @@ class PrometheusStatLogger(StatLoggerBase):
                 ],
                 labelnames=labelnames).labels(*labelvalues)
 
+        self.histogram_time_per_prefill_token_request = \
+            prometheus_client.Histogram(
+                name="vllm:time_per_prefill_token_request_seconds",
+                documentation="Time spent per token during prefill  "
+                "phase in seconds",
+                buckets=[
+                    0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0
+                ],
+                labelnames=labelnames).labels(*labelvalues)
+
         request_latency_buckets = [
             0.3, 0.5, 0.8, 1.0, 1.5, 2.0, 2.5, 5.0, 10.0, 15.0, 20.0, 30.0,
             40.0, 50.0, 60.0
@@ -302,8 +312,14 @@ class PrometheusStatLogger(StatLoggerBase):
             self.histogram_time_per_output_token.observe(tpot)
         for queue_time in iteration_stats.queue_times_iter:
             self.histogram_queue_time_request.observe(queue_time)
-        for prefill_time in iteration_stats.prefill_times_iter:
+        for i, prefill_time in enumerate(iteration_stats.prefill_times_iter):
             self.histogram_prefill_time_request.observe(prefill_time)
+            if i < len(iteration_stats.prefill_lens_iter):
+                prompt_len = iteration_stats.prefill_lens_iter[i]
+                if prompt_len > 0:
+                    time_per_prefill_token = prefill_time / prompt_len
+                    self.histogram_time_per_prefill_token_request.observe(
+                        time_per_prefill_token)
 
     @staticmethod
     def _unregister_vllm_metrics():

@@ -121,15 +121,17 @@ class EngineCore:
                 model_runner = getattr(driver_worker, "model_runner", None)
                 if model_runner:
                     model_gpu_load_time = (getattr(model_runner,
-                                                  "model_load_time", 0.0))
+                                                   "model_load_time", 0.0))
                     cuda_graph_time = (getattr(model_runner,
                                                "cuda_graph_capture_time", 0.0))
                     compilation_config: CompilationConfig = (
                         vllm_config.compilation_config)
                     torch_compile_time = compilation_config.compilation_time
                     total_gpu_load_time = (elapsed + model_gpu_load_time +
-                                           torch_compile_time + cuda_graph_time)
-                    logger.info(("GPU model loading (loading model weights, "
+                                           torch_compile_time +
+                                           cuda_graph_time)
+                    logger.info(
+                        ("GPU model loading (loading model weights, "
                          "torch.compile, capturing graphs, init engine) "
                          "took %.2f seconds"), total_gpu_load_time)
 
