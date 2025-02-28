@@ -120,6 +120,12 @@ class PrometheusStatLogger(StatLoggerBase):
             documentation="GPU KV-cache usage. 1 means 100 percent usage.",
             labelnames=labelnames).labels(*labelvalues)
 
+        self.gauge_total_tokens_in_queue = prometheus_client.Gauge(
+            name="vllm:total_tokens_in_queue",
+            documentation=
+            "Total number of tokens currently waiting in the queue",
+            labelnames=labelnames).labels(*labelvalues)
+
         self.counter_gpu_prefix_cache_queries = prometheus_client.Counter(
             name="vllm:gpu_prefix_cache_queries",
             documentation=
@@ -278,7 +284,8 @@ class PrometheusStatLogger(StatLoggerBase):
         """Log to prometheus."""
         self.gauge_scheduler_running.set(scheduler_stats.num_running_reqs)
         self.gauge_scheduler_waiting.set(scheduler_stats.num_waiting_reqs)
-
+        self.gauge_total_tokens_in_queue.set(
+            scheduler_stats.total_tokens_in_queue)
         self.gauge_gpu_cache_usage.set(scheduler_stats.gpu_cache_usage)
 
         self.counter_gpu_prefix_cache_queries.inc(
