@@ -704,4 +704,6 @@ class Scheduler:
             total_tokens_in_queue=self._waiting_tokens,
             gpu_cache_usage=self.kv_cache_manager.usage,
             prefix_cache_stats=self.kv_cache_manager.make_prefix_cache_stats(),
+            num_evicted_tokens=self.kv_cache_manager.
+            get_and_reset_evicted_tokens(),
         )
