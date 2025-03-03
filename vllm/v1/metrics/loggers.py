@@ -342,6 +342,11 @@ class PrometheusStatLogger(StatLoggerBase):
                 finished_request.queued_time)
             self.histogram_prefill_time_request.observe(
                 finished_request.prefill_time)
+            if finished_request.num_prompt_tokens > 0:
+                time_per_prefill_token = (finished_request.prefill_time /
+                                          finished_request.num_prompt_tokens)
+                self.histogram_time_per_prefill_token_request.observe(
+                    time_per_prefill_token)
             self.histogram_inference_time_request.observe(
                 finished_request.inference_time)
             self.histogram_decode_time_request.observe(
@@ -351,21 +356,6 @@ class PrometheusStatLogger(StatLoggerBase):
             self.histogram_num_generation_tokens_request.observe(
                 finished_request.num_generation_tokens)
 
-        for ttft in iteration_stats.time_to_first_tokens_iter:
-            self.histogram_time_to_first_token.observe(ttft)
-        for tpot in iteration_stats.time_per_output_tokens_iter:
-            self.histogram_time_per_output_token.observe(tpot)
-        for queue_time in iteration_stats.queue_times_iter:
-            self.histogram_queue_time_request.observe(queue_time)
-        for i, prefill_time in enumerate(iteration_stats.prefill_times_iter):
-            self.histogram_prefill_time_request.observe(prefill_time)
-            if i < len(iteration_stats.prefill_lens_iter):
-                prompt_len = iteration_stats.prefill_lens_iter[i]
-                if prompt_len > 0:
-                    time_per_prefill_token = prefill_time / prompt_len
-                    self.histogram_time_per_prefill_token_request.observe(
-                        time_per_prefill_token)
-                    
         if self.gauge_lora_info is not None:
             running_lora_adapters = \
                 ",".join(iteration_stats.running_lora_adapters.keys())

@@ -85,9 +85,6 @@ class IterationStats:
         self.finished_requests: List[FinishedRequestStats] = []
         self.time_to_first_tokens_iter: List[float] = []
         self.time_per_output_tokens_iter: List[float] = []
-        self.queue_times_iter: List[float] = []
-        self.prefill_times_iter: List[float] = []
-        self.prefill_lens_iter: List[int] = []
         self.waiting_lora_adapters: Dict[str, int] = {}
         self.running_lora_adapters: Dict[str, int] = {}
 
@@ -128,7 +125,6 @@ class IterationStats:
             # TODO: re-enable no-output-for-partial-prefills invariant as above
             if num_new_generation_tokens > 0:
                 req_stats.first_token_ts = engine_core_timestamp
-                self.prefill_lens_iter.append(prompt_len)
         else:
             tpot = engine_core_timestamp - req_stats.last_token_ts
             self.time_per_output_tokens_iter.append(tpot)
