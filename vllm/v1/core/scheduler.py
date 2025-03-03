@@ -107,8 +107,8 @@ class Scheduler:
         future decode tokens.
         """
         prompt_tokens = len(request.prompt_token_ids)
-        max_new_tokens = request.max_tokens if \
-            request.max_tokens is not None else 0
+        max_new_tokens = 0 if request.max_tokens is None\
+            else request.max_tokens
         return prompt_tokens + max_new_tokens
 
     def schedule(self) -> "SchedulerOutput":
